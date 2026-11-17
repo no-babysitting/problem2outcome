@@ -73,6 +73,7 @@ Capability Blindness · Interaction Gap · Workflow Gap · Problem Framing Gap �
 | B7 | Ideal entry point: paste a public repo URL / resource URL, **no** Skill or Plugin install | **Unvalidated assumption** — a desired UX, not an architecture |
 | B8 | Prefer native capabilities, avoid rebuilding what platforms already have | Explicit decision |
 | B9 | The first target segment | **Open** — research recommends (section 2.2) |
+| B10 | Anthropic's Six Shifts is the spirit and inspiration of the methodology | Explicit decision — use it as the design lens; research shows how to turn it into product behavior and where it needs reinforcing |
 
 **Tensions to address directly:**
 - T1: The entry point (repo URL) leans toward technical users, while the target user may be broader. Do the entry point and the segment have to be chosen **together**? Propose a matching entry point for each segment.
@@ -109,7 +110,9 @@ Dimensions: Skills/Plugins · MCP · agents / delegated execution · memory · c
 
 Reference: `https://support.claude.com/en/articles/12512198-how-to-create-custom-skills`
 
-**Best practices for optimizing how AI is applied:** synthesize official guidance from the major vendors (Anthropic, OpenAI, Google) and credible research on context engineering, delegating work to agents, writing intent / constraints / acceptance criteria, verifying outputs, and human-in-the-loop. Anthropic's **Six Shifts** is **one reference among these sources** — extract its principles that are useful for applying AI and compare them with other sources; **do not verify** its background claims (e.g. the system-prompt reduction figures). Goal: identify which practices produce clear improvements and which ones NB could turn into guidance or evaluation criteria.
+**Six Shifts — the spirit and inspiration of the project:** find Anthropic's official source and present each shift accurately (wording, date, scope). This is the **guiding philosophy** for the methodology, so analyze it carefully: (a) what each shift means for how people apply AI in real work, (b) how each shift maps onto the six gaps, the four capabilities NB owns, and the four evaluation dimensions, (c) where Six Shifts gives a clear direction and where it says nothing or is open to interpretation that needs extra principles. **Do not verify** its background claims (e.g. the system-prompt reduction figures); the focus is on **optimizing how AI is applied**.
+
+**Best practices for optimizing how AI is applied:** synthesize official guidance from the major vendors (Anthropic, OpenAI, Google) and credible research on context engineering, delegating work to agents, writing intent / constraints / acceptance criteria, verifying outputs, and human-in-the-loop. Use this to **reinforce and fill in** Six Shifts: where the evidence supports it, where it adds something, and where — honestly — it is in tension (if it is, say so). Goal: identify which practices produce clear improvements and which ones NB could turn into guidance or evaluation criteria.
 
 Output: (a) a table of **delegate / own / needs an adapter / not yet reliable / likely to become obsolete as platforms improve**, with an estimated time horizon for the risk of being absorbed by the platforms; (b) a short list of the AI-application principles with the strongest evidence.
 
@@ -175,8 +178,8 @@ Writing: Vietnamese, keep English technical terms where they are more precise (e
 4. **Architecture Alternatives** — comparison table, logical diagrams (Mermaid or ASCII), responsibility boundaries native vs. custom, memory/evaluation strategy, security/privacy, cost/complexity by K1/K2; **a recommended architecture** + **a list of things NOT to build**.
 5. **Adaptive Evaluation Framework** — dimensions, observable evidence, methods, adaptation mechanisms, user control, uncertainty handling, learning loop; draw on the AI-application principles with the strongest evidence (WS2). No complex scoring system without evidence.
 6. **MVP & Validation Plan** — first experiment, participants, task selection, baseline, prototype, data to collect, metrics, kill criteria, sequence, by K1/K2. Separate what is validated by desk research / prototype testing / real user behavior.
-7. **Product Blueprint (concise)** — positioning, target user, value proposition, core capabilities, boundaries, architecture principles, interaction patterns, memory and evaluation principles, MVP scope, non-goals.
-8. **Decision Register** — table `Decision | Current Position | Evidence | Confidence | Trade-offs | Recommended Action`, classified **Locked / Provisionally accepted / Requires validation / Reconsider** (start from B1–B9).
+7. **Product Blueprint (concise)** — how Six Shifts shows up in the product (a shift → product behavior mapping), positioning, target user, value proposition, core capabilities, boundaries, architecture principles, interaction patterns, memory and evaluation principles, MVP scope, non-goals.
+8. **Decision Register** — table `Decision | Current Position | Evidence | Confidence | Trade-offs | Recommended Action`, classified **Locked / Provisionally accepted / Requires validation / Reconsider** (start from B1–B10).
 9. **Roadmap** — Stage 0 Validation prep → 1 Smallest MVP → 2 Learning & adaptation → 3 Portability & integrations → 4 Ecosystem. Keep only the stages justified by evidence, with the gate condition to move to the next stage.
 10. **Remaining Unknowns** — each question: why it matters, what evidence is missing, desk research / interview / experiment, the cheapest way to resolve it. Do not list questions that research can answer on its own.
 11. **Appendix: Sources** — grouped by workstream, with dates/versions.
