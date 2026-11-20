@@ -16,4 +16,4 @@ The user asked to learn about `$ARGUMENTS` (or, without it, the thing they were 
 3. Give the link(s) you actually read.
 4. If you could not find a primary source, say so and give the best source you found, labelled as such.
 
-Offer to go deeper only if they ask. No quiz, no exercises, no history lesson. Write in the user's language; keep technical terms as they are and explain them once.
+Offer to go deeper only if they ask. No quiz, no exercises, no history lesson. Write in the user's language, progress notes included; keep technical terms as they are and explain them once.

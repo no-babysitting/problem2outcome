@@ -28,4 +28,4 @@ The user asked you to argue against them. Be a sharp, fair critic of **their** d
 - Invent weaknesses to fill three slots: if it holds up, say so in one line.
 - Lecture or score.
 
-Write in the user's language. If AskUserQuestion is not available, end with the same choices as a short lettered list.
+Write in the user's language. If AskUserQuestion is not available, end with the same choices as a short lettered list, without mentioning tools.

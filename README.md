@@ -53,15 +53,13 @@ Everything the agent remembers about you is in `me.md` and `tasks/`. You can rea
 - **`/grill-me`, `/challenge-me` and `/teach-me`** as real skills, with questions shown as clickable choices.
 - **One pause before the first file is written**, if you have not said what counts as done yet. It asks only once.
 
-**Install, in the Claude desktop app:** in a Code session, click **+** next to the message box, choose **Plugins**, then **Add marketplace**, and enter `no-babysitting/problem2outcome`. Then add the **nb** plugin. It turns on in the session you are in, with no restart.
-
-**Install, in a terminal:**
+**Install (Claude desktop app or terminal):** in a Code session, type this into the message box and send it:
 
 ```
 /plugin install nb --marketplace no-babysitting/problem2outcome
 ```
 
-Answer `y` to add the marketplace, then choose a scope.
+Answer `y` to add the marketplace, then choose a scope. Usually it turns on right away in the session you are in. If Claude says a reload is needed, type `/reload-plugins`. You do not need a new session. Needs Claude Code 2.1.286 or later in the desktop app (2.1.287 in a terminal); `/status` shows yours.
 
 **Commands that cost no tokens:** `/nb` shows where your task stands. `/mascot quiet | normal | chatty` sets how often The Colleague speaks. `/nb-lang en | vi` and `/nb-scene on | off` set the language and the background.
 
@@ -126,15 +124,13 @@ Không có nó, `AGENTS.md` vẫn đủ dùng. Tiện ích này (một "mod" c�
 - **`/grill-me`, `/challenge-me` và `/teach-me`** là skill thật, câu hỏi hiện thành lựa chọn để bấm.
 - **Dừng một lần trước khi ghi file đầu tiên**, nếu bạn chưa nói thế nào là xong. Chỉ hỏi một lần.
 
-**Cài trong app Claude trên máy tính:** trong một phiên Code, bấm **+** cạnh ô nhập, chọn **Plugins**, rồi **Add marketplace**, nhập `no-babysitting/problem2outcome`. Sau đó thêm plugin **nb**. Nó bật ngay trong phiên đang mở, không cần mở phiên mới.
-
-**Cài trong terminal:**
+**Cài (app Claude trên máy tính hoặc terminal):** trong một phiên Code, gõ dòng này vào ô nhập rồi gửi:
 
 ```
 /plugin install nb --marketplace no-babysitting/problem2outcome
 ```
 
-Trả lời `y` để thêm marketplace, rồi chọn phạm vi cài.
+Trả lời `y` để thêm marketplace, rồi chọn phạm vi cài. Thường nó bật ngay trong phiên đang mở. Nếu Claude báo cần tải lại, gõ `/reload-plugins`. Không cần mở phiên mới. Cần Claude Code bản 2.1.286 trở lên trong app (2.1.287 trong terminal); gõ `/status` để xem bản của bạn.
 
 **Lệnh không tốn token:** `/nb` cho biết việc đang ở đâu. `/mascot quiet | normal | chatty` chỉnh mức The Colleague lên tiếng. `/nb-lang en | vi` và `/nb-scene on | off` đổi ngôn ngữ và bật tắt cảnh nền.
 

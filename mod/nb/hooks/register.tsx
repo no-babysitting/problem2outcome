@@ -17,7 +17,7 @@ import type { EngineInterface, Register, ThemeSetArgs } from 'claude-code'
 import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '../types'
 
 import { bandSVG, bandText } from './band-svg.js'
-import { nbInstruction, presetLine, STATE_WORDS, strip, UI } from './colleague.js'
+import { DECISION_WORDS, nbInstruction, presetLine, STATE_WORDS, strip, UI } from './colleague.js'
 import { languageOf, parseDecisions, progressOf } from './decisions.js'
 import { makeColors } from './make-colors.js'
 import { asciiSceneSVG } from './scene.js'
@@ -262,7 +262,9 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
       await say($, '')
     }
 
-    return { text: vi ? `The Colleague: ${level}.` : `The Colleague: ${level}.` }
+    const viLevel = { quiet: 'ít nói', normal: 'vừa phải', chatty: 'hay nói' }[level]
+
+    return { text: vi ? `The Colleague giờ ${viLevel}.` : `The Colleague: ${level}.` }
   }
 
   if (name === 'nb-lang') {
@@ -273,7 +275,7 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
     await $.store.set('nb.lang', arg)
     await say($, presetLine(arg, await read($, taskAtom), await read($, firstRunAtom)))
 
-    return { text: arg === 'vi' ? 'NB nói tiếng Việt.' : 'NB speaks English.' }
+    return { text: arg === 'vi' ? 'Từ giờ NB nói tiếng Việt.' : 'NB speaks English now.' }
   }
 
   if (name === 'nb-scene') {
@@ -291,7 +293,7 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
   const task = await refreshTask($)
   const level = await read($, levelAtom)
   const scene = await read($, sceneAtom)
-  const words = vi ? ['vấn đề', 'xong là gì', 'giao việc', 'nghiệm thu'] : ['real problem', 'done means', 'delegate', 'accept']
+  const words = DECISION_WORDS[lang]
   const lines: string[] = []
 
   if (task === null) {
@@ -306,7 +308,11 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
   }
   lines.push('')
   lines.push(`/mascot ${level} · /nb-lang ${lang} · /nb-scene ${scene ? 'on' : 'off'}`)
-  lines.push(vi ? 'Skill: /grill-me, /challenge-me, /teach-me' : 'Skills: /grill-me, /challenge-me, /teach-me')
+  lines.push(
+    vi
+      ? '/grill-me: hỏi vặn cho rõ việc · /challenge-me: phản biện quyết định của bạn · /teach-me: tóm tắt tài liệu chính thức'
+      : '/grill-me: sharpen the task · /challenge-me: argue against your decision · /teach-me: the official docs, in a few lines',
+  )
 
   return { text: lines.join('\n') }
 }
