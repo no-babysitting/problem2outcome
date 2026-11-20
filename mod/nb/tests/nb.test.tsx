@@ -166,6 +166,8 @@ test('band: every state draws, under the Svg limit, with the face in it', () => 
     expect(svg.length < 131072).toBe(true)
     expect(svg.includes('[')).toBe(true)
     expect(svg.includes('<script')).toBe(false)
+    // DS motion rule: nothing loops forever.
+    expect(svg.includes('infinite')).toBe(false)
   }
 })
 
@@ -176,6 +178,7 @@ test('scene: each sun height is a valid, small enough SVG', () => {
     expect(svg.startsWith('<svg')).toBe(true)
     expect(svg.length < 131072).toBe(true)
     expect(/<image|<script|href/.test(svg)).toBe(false)
+    expect(svg.includes('infinite')).toBe(false)
   }
 })
 

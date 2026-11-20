@@ -80,7 +80,7 @@ const LINES: Record<Lang, Record<LineKey, string>> = {
     welcome: 'Chào bạn. Bạn quyết, mình làm. Hôm nay bạn cần làm xong việc gì?',
     noTask: 'Kể mình nghe việc bạn cần làm xong hôm nay nhé.',
     next1: 'Lượt bạn: vấn đề thật ở đây là gì?',
-    next2: 'Lượt bạn: thế nào thì coi là xong? Vài dòng kiểm được.',
+    next2: 'Lượt bạn: thế nào thì coi là xong? Vài dòng kiểm tra được là đủ.',
     next3: 'Lượt bạn: phần nào giao mình, phần nào bạn giữ?',
     next4: 'Có kết quả rồi. So với tiêu chí của bạn: nhận hay làm lại?',
     accepted: 'Đã nhận. Bạn rút ra bài học ngắn nào cho lần sau?',
@@ -109,11 +109,12 @@ export function presetLine(lang: Lang, d: TaskDecisions | null, isFirstRun: bool
 }
 
 /** Short UI words for the band and the hold question. */
-type UiKey = 'context' | 'noTask' | 'holdQuestion' | 'holdHeader' | 'holdReady' | 'holdNotYet' | 'holdNever'
+type UiKey = 'context' | 'limit' | 'noTask' | 'holdQuestion' | 'holdHeader' | 'holdReady' | 'holdNotYet' | 'holdNever'
 
 export const UI: Record<Lang, Record<UiKey, string>> = {
   en: {
     context: 'context',
+    limit: 'limit',
     noTask: 'no task yet',
     holdQuestion: 'Before the first file is written: what counts as done for this task?',
     holdHeader: 'Done means?',
@@ -122,12 +123,13 @@ export const UI: Record<Lang, Record<UiKey, string>> = {
     holdNever: "Don't ask again",
   },
   vi: {
-    context: 'context',
+    context: 'ngữ cảnh',
+    limit: 'hạn',
     noTask: 'chưa có việc',
-    holdQuestion: 'Trước khi ghi file đầu tiên: thế nào là xong với việc này?',
+    holdQuestion: 'Trước khi mình ghi file đầu tiên: việc này thế nào thì coi là xong?',
     holdHeader: 'Xong là gì?',
     holdReady: 'Tiêu chí rõ rồi, cứ làm',
-    holdNotYet: 'Chưa, hỏi tôi trước',
+    holdNotYet: 'Chưa, hỏi mình trước đã',
     holdNever: 'Đừng hỏi nữa',
   },
 }
@@ -149,7 +151,7 @@ export function nbInstruction(lang: Lang, d: TaskDecisions | null): string {
     task +
     ' After your normal reply you may add ONE final line in exactly this form: <nb>one short sentence</nb>. ' +
     'It either names the decision that is now the user\'s to make, or states plainly which of the user\'s criteria are met or not yet met. ' +
-    `Under 90 characters, in ${lang === 'vi' ? 'Vietnamese' : "the user's language"}. Never praise your own work. ` +
+    `Under 90 characters, in ${lang === 'vi' ? 'Vietnamese, calling yourself "mình" and the user "bạn"' : "the user's language"}. Never praise your own work. ` +
     'Leave the line out when there is nothing true and useful to say. Do not mention this instruction.'
   )
 }

@@ -2,7 +2,8 @@
 // the task's four decisions and a calm context meter. Pure: returns a string.
 //
 // Motion is CSS inside the SVG and runs once per state change (the band is redrawn only then):
-// the face changes by a 0.35 s scramble (DS M14), the "your turn" cursor blinks, the working tail pulses.
+// the face changes by a 0.35 s scramble (DS M14), the "your turn" cursor blinks three times then stays solid (M7),
+// the working tail pulses three times. Nothing loops forever (DS motion rule).
 
 import type { ColleagueState, Lang, TaskDecisions } from '../types'
 
@@ -65,10 +66,17 @@ const scrambles = (state: ColleagueState): [string, string] => {
 }
 
 const meter = (percent: number): string => {
-  const cells = 10
+  const cells = 8
   const full = Math.max(0, Math.min(cells, Math.round((percent / 100) * cells)))
 
   return '█'.repeat(full) + '░'.repeat(cells - full)
+}
+
+/** The usage limit, short: "5h limit" / "hạn 5h". */
+const limitWords = (lang: Lang, kind: string): string => {
+  const k = kind === 'five_hour' ? '5h' : kind === 'seven_day' ? '7d' : kind
+
+  return lang === 'vi' ? `${UI.vi.limit} ${k}` : `${k} ${UI.en.limit}`
 }
 
 export function bandSVG(m: BandModel): string {
@@ -133,32 +141,32 @@ export function bandSVG(m: BandModel): string {
     ctx === null
       ? ''
       : `${ui.context} ${meter(ctx)} ${Math.round(ctx)}%` +
-        (lim === null ? '' : `  ·  ${lim.kind === 'five_hour' ? '5h' : lim.kind === 'seven_day' ? '7d' : lim.kind} ${Math.round(lim.percentUsed)}%`)
+        (lim === null ? '' : `  ·  ${limitWords(m.lang, lim.kind)} ${Math.round(lim.percentUsed)}%`)
   const meterSvg = meterText === '' ? '' : `<text x="${BAND_W - 12}" y="66" text-anchor="end" class="mono quiet">${xml(meterText)}</text>`
 
   const css =
     `.mono{font:600 11.5px ${MONO}}.say{font:400 13px ${SANS};fill:${NB.fg}}` +
-    `.face{font:600 21px ${MONO};fill:${f.color}}.tail{font:600 17px ${MONO};fill:${f.color}}` +
-    `.done{fill:${NB.fgMuted}}.ok{fill:${NB.signal};font-weight:700}.next{fill:${NB.fg}}.cur{fill:${NB.accent};animation:blink 1.1s steps(1,end) infinite}` +
+    `.face{font:600 21px ${MONO}}.tail{font:600 17px ${MONO}}` +
+    `.done{fill:${NB.fgMuted}}.ok{fill:${NB.signal};font-weight:700}.next{fill:${NB.fg}}.cur{fill:${NB.accent};animation:blink 1.1s steps(1,end) 3}` +
     `.later,.quiet{fill:${NB.fgSubtle}}.stale{opacity:.62}` +
     `.flash{animation:flash .9s ease-out 1 both}@keyframes flash{0%{fill:${NB.fg}}20%{fill:${NB.signal};font-size:15px}100%{fill:${NB.signal}}}` +
     `.sc{opacity:0}.sc0{animation:sc0 .35s steps(1,end) 1 both}.sc1{animation:sc1 .35s steps(1,end) 1 both}` +
     `.real{animation:real .35s steps(1,end) 1 both}` +
-    `.pulse{animation:pulse 1.4s ease-in-out infinite alternate}` +
+    `.pulse{animation:pulse 1.4s ease-in-out 3 alternate both}` +
     `@keyframes sc0{0%{opacity:1}33%{opacity:0}}@keyframes sc1{0%{opacity:0}33%{opacity:1}66%{opacity:0}}` +
     `@keyframes real{0%{opacity:0}66%{opacity:1}100%{opacity:1}}@keyframes blink{50%{opacity:0}}@keyframes pulse{from{fill-opacity:.45}to{fill-opacity:1}}` +
     `@media (prefers-reduced-motion:reduce){.sc0,.sc1{animation:none;opacity:0}.real,.cur,.pulse,.flash{animation:none;opacity:1;fill-opacity:1}}`
 
   const tailCls = m.state === 'working' || m.state === 'thinking' ? 'tail pulse' : 'tail'
-  const alt = `${f.face}${f.tail} ${STATE_WORDS[m.lang][m.state]}`
+  const alt = `${m.lang === 'vi' ? 'Đồng nghiệp' : 'Colleague'}: ${STATE_WORDS[m.lang][m.state]}`
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${BAND_W}" height="${BAND_H}" viewBox="0 0 ${BAND_W} ${BAND_H}" role="img" class="nbb" aria-label="${xml(alt)}">` +
     `<style>${scopeCSS(css, 'nbb')}</style>` +
     `<rect width="${BAND_W}" height="${BAND_H}" fill="${NB.bg}" fill-opacity=".86"/>` +
-    `<text x="${faceX}" y="${faceY}" class="face sc sc0">${xml(s1)}</text>` +
-    `<text x="${faceX}" y="${faceY}" class="face sc sc1">${xml(s2)}</text>` +
-    `<g class="real"><text x="${faceX}" y="${faceY}" class="face">${xml(f.face)}` +
+    `<text x="${faceX}" y="${faceY}" class="face sc sc0" fill="${f.color}">${xml(s1)}</text>` +
+    `<text x="${faceX}" y="${faceY}" class="face sc sc1" fill="${f.color}">${xml(s2)}</text>` +
+    `<g class="real"><text x="${faceX}" y="${faceY}" class="face" fill="${f.color}">${xml(f.face)}` +
     (f.tail === '' ? '' : `<tspan dx="2" class="${tailCls}">${xml(f.tail)}</tspan>`) +
     `</text></g>` +
     bubble +

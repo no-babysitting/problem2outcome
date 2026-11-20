@@ -436,12 +436,12 @@ export function asciiSceneSVG(
       : ''
   const motion =
     '.nz{fill:#8d8376;fill-opacity:.34}.fr{fill:#d97a4a}' +
-    '.w{opacity:0;animation:w 6s steps(1,end) infinite}.w0{opacity:1}.w1{animation-delay:-2s}.w2{animation-delay:-4s}' +
+    '.w{opacity:0;animation:w 6s steps(1,end) 3}.w0{opacity:1}.w1{animation-delay:-2s}.w2{animation-delay:-4s}' +
     '@keyframes w{0%{opacity:1}33.4%{opacity:0}}' +
     '.bo{animation:bo .01s steps(1,end) 1 both}@keyframes bo{to{opacity:0}}' +
     '.bf{animation:bf .5s ease-out 1 both}@keyframes bf{0%{opacity:0}1%{opacity:1}100%{opacity:0}}' +
     '.bi{animation:bi .3s ease-out 1 both}@keyframes bi{from{opacity:0}to{opacity:1}}' +
-    '.st{fill:#f4ecff;opacity:.25;animation:t 5s ease-in-out infinite alternate}.s1{animation-delay:-1.7s}.s2{animation-delay:-3.3s}@keyframes t{to{opacity:.8}}' +
+    '.st{fill:#f4ecff;opacity:.25;animation:t 5s ease-in-out 2 alternate}.s1{animation-delay:-1.7s}.s2{animation-delay:-3.3s}@keyframes t{to{opacity:.8}}' +
     '@media (prefers-reduced-motion:reduce){.w,.st,.bo,.bf,.bi{animation:none!important}.w1,.w2,.bo,.bf{opacity:0}}'
 
   return (
