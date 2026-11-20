@@ -300,7 +300,7 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
     lines.push(`${vi ? 'Việc' : 'Task'}: ${task.name}`)
     for (let i = 0; i < 4; i++) {
       if (task.applies[i]) {
-        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? '✓' : task.next === i + 1 ? (vi ? '← đến lượt bạn' : '← your turn') : '·'}`)
+        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? '✓' : task.next === i + 1 ? (vi ? '▍ lượt bạn' : '▍ your turn') : '·'}`)
       }
     }
   }

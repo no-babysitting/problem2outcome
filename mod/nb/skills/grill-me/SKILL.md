@@ -33,6 +33,7 @@ Before the first round, read what you need (the task's `decisions.md`, the files
 
 - Stop when the user says so, at once.
 - When nothing material is open, say so and offer to stop or to start the work. End with a short list of what was decided.
+- Before the work starts, follow the workspace rule for decision 2: if the criteria were settled here, add the one `/goal` line it asks for.
 - A grill is not progress in itself: after about three rounds, check whether they want to keep going or start working.
 
 ## Never
@@ -41,4 +42,4 @@ Before the first round, read what you need (the task's `decisions.md`, the files
 - Lecture, score or quiz.
 - Ask about anything you can find in the workspace files.
 
-If the AskUserQuestion tool is not available, write the round as a numbered list, each question with lettered options, your recommendation first and marked, and ask them to reply like "1b, 2a".
+If the AskUserQuestion tool is not available, write the round as a numbered list, each question with lettered options, your recommendation first and marked, and ask them to reply like "1b, 2a". Do not mention tools; just ask.

@@ -116,7 +116,10 @@ export function bandSVG(m: BandModel): string {
 
       spans.push(`<tspan${gap} class="${cls}">${xml(`${CIRCLED[i]} ${words[i]}`)}</tspan>`)
       if (made) {
-        spans.push(`<tspan dx="5" class="ok">${i === 3 && d.redo ? '↺' : '✓'}</tspan>`)
+        // M9: the moment the user accepts, the last ✓ flashes signal once.
+        const flash = i === 3 && d.accepted && m.state === 'verified' ? ' flash' : ''
+
+        spans.push(`<tspan dx="5" class="ok${flash}">${i === 3 && d.redo ? '↺' : '✓'}</tspan>`)
       } else if (isNext) {
         spans.push(`<tspan dx="3" class="cur">▍</tspan>`)
       }
@@ -138,12 +141,13 @@ export function bandSVG(m: BandModel): string {
     `.face{font:600 21px ${MONO};fill:${f.color}}.tail{font:600 17px ${MONO};fill:${f.color}}` +
     `.done{fill:${NB.fgMuted}}.ok{fill:${NB.signal};font-weight:700}.next{fill:${NB.fg}}.cur{fill:${NB.accent};animation:blink 1.1s steps(1,end) infinite}` +
     `.later,.quiet{fill:${NB.fgSubtle}}.stale{opacity:.62}` +
+    `.flash{animation:flash .9s ease-out 1 both}@keyframes flash{0%{fill:${NB.fg}}20%{fill:${NB.signal};font-size:15px}100%{fill:${NB.signal}}}` +
     `.sc{opacity:0}.sc0{animation:sc0 .35s steps(1,end) 1 both}.sc1{animation:sc1 .35s steps(1,end) 1 both}` +
     `.real{animation:real .35s steps(1,end) 1 both}` +
     `.pulse{animation:pulse 1.4s ease-in-out infinite alternate}` +
     `@keyframes sc0{0%{opacity:1}33%{opacity:0}}@keyframes sc1{0%{opacity:0}33%{opacity:1}66%{opacity:0}}` +
     `@keyframes real{0%{opacity:0}66%{opacity:1}100%{opacity:1}}@keyframes blink{50%{opacity:0}}@keyframes pulse{from{fill-opacity:.45}to{fill-opacity:1}}` +
-    `@media (prefers-reduced-motion:reduce){.sc0,.sc1{animation:none;opacity:0}.real,.cur,.pulse{animation:none;opacity:1;fill-opacity:1}}`
+    `@media (prefers-reduced-motion:reduce){.sc0,.sc1{animation:none;opacity:0}.real,.cur,.pulse,.flash{animation:none;opacity:1;fill-opacity:1}}`
 
   const tailCls = m.state === 'working' || m.state === 'thinking' ? 'tail pulse' : 'tail'
   const alt = `${f.face}${f.tail} ${STATE_WORDS[m.lang][m.state]}`
