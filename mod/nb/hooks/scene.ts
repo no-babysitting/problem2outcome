@@ -123,6 +123,8 @@ export const shade = (u: number, v: number, asp: number, m: Mood, phase: number,
     c = mix(c, m.sun, glow * glow * glow * 0.55)
     // Chữ dày chỉ quanh mặt trời; phần trời còn lại là dấu nhẹ, để mắt có một tâm điểm.
     lit = (0.6 + 0.3 * glow * glow * glow) * (0.55 + 0.45 * ss(0.1, 0.85, v / hz))
+    // Xa mặt trời theo chiều ngang thì trời thưa dần: mép trái là khoảng thở, không phải một bức tường dấu hai chấm.
+    lit *= 0.62 + 0.38 * ss(0.15, 0.75, 1 - Math.abs(u - sx))
     // Mây kéo ngang, mặt dưới bắt nắng: phá các hàng chữ đều nhau thành kết cấu.
     const band = ss(0.15, 0.4, v / hz) * (1 - ss(0.75, 0.95, v / hz))
     const cloud = ss(0.5, 0.72, fbm(u * 2.6 + 11, v * 16, 31)) * band
@@ -168,7 +170,10 @@ export const shade = (u: number, v: number, asp: number, m: Mood, phase: number,
         const near = Math.max(0, 1 - dist / 0.7)
         const rim = v - ridge < 0.026 ? (1 - k * 0.35) * near : 0
         c = mix(m.ridges[k]!, m.sun, Math.max(0, rim * 0.45 + glow * glow * (0.25 - k * 0.08)))
-        lit = ([0.5, 0.38, 0.28][k] ?? 0.28) + rim * 0.9
+        // Thân núi có vân (sườn đón nắng sáng hơn, sâu xuống thì tối dần), không phải một mảng ký tự đều.
+        const grain = 0.7 + 0.6 * fbm(u * (7 + k * 4) + k * 3, v * 12, 7 + k)
+        const depth = 1 - 0.4 * ss(0, 0.16, v - ridge)
+        lit = (([0.5, 0.38, 0.28][k] ?? 0.28) * grain * depth) + rim * 0.9
         isSun = false
         edge = ''
         core = -1
