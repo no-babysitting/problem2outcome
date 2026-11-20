@@ -101,4 +101,4 @@ Bài học từ mod `matrix-rain` (thử cùng đợt): hoạt ảnh liên tục
 - `ui.render` là hàm thuần: engine **từ chối** `state.set` trong lúc vẽ. Vì vậy C9 tách đôi: hook vẽ chỉ cắt chữ, còn việc đưa dòng `<nb>` sang mascot làm ở `turn.complete` (sự kiện này có `answer`, câu trả lời cuối). Hệ quả: mascot cập nhật **sau khi hết lượt**, không phải lúc đang stream.
 - `$.ui.ask` đi qua một `tool.call` của `AskUserQuestion`. Hook `tool.call` của mod nghe được nó (và phải bỏ qua), nên mod khác cũng thấy hộp hỏi của ta.
 - Bộ kiểm tra của engine đọc mã tĩnh: `read`/`update` chỉ nhận atom khai báo ngay trong file dùng nó, hàm nhận `$` phải là `function` khai báo, và mỗi sự kiện chỉ một hook khi không có matcher.
-- Kiểm tra bằng máy: `claude plugin validate nb-spike` và `claude plugin test nb-spike` (9 test) (12 test) đều qua. Không có test nào vẽ thật: phần nhìn bằng mắt là việc của bạn trên Desktop.
+- Kiểm tra bằng máy: `claude plugin validate nb-spike` và `claude plugin test nb-spike` (12 test) đều qua. Không có test nào vẽ thật: phần nhìn bằng mắt là việc của bạn trên Desktop.
