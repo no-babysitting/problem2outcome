@@ -6,7 +6,7 @@
 // Lệnh: commands.ts (C14, C15, C18, /spike-report).
 import type { Register } from 'claude-code'
 
-import { declareCommands, registerCommands } from './commands.js'
+import { declareCommands, loadSettings, registerCommands } from './commands.js'
 import { registerAnim, startAnim } from './probe-anim.js'
 import { registerHold } from './probe-hold.js'
 import { registerStrip } from './probe-strip.js'
@@ -15,6 +15,7 @@ export const register: Register = (on, options) => {
   // Một hook session.start duy nhất: engine từ chối hai hook cùng sự kiện, cùng không matcher.
   on('session.start', async ($, e, next) => {
     await declareCommands($)
+    await loadSettings($)
     await startAnim($, e.surface)
 
     return next(e)

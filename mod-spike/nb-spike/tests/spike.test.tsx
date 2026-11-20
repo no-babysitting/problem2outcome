@@ -179,3 +179,47 @@ test('turn.complete: dòng <nb> của câu trả lời cuối sang mascot', asyn
 
   expect(JSON.stringify(written)).toContain('You set clear criteria.')
 })
+
+test('lệnh của mod khác đi thẳng xuống, nb-spike không chạm vào', async ($, on) => {
+  let seen = ''
+
+  store(on)
+  clock(on)
+  on('command.run', (_, e) => {
+    seen = e.command
+
+    return { text: 'matrix ok' }
+  })
+
+  const result = await $.command.run({ command: 'matrix', args: '' } as never)
+
+  expect(seen).toBe('matrix')
+  expect(result.text).toBe('matrix ok')
+})
+
+test('/teach-me có chủ đề thì điền cả chủ đề; không có thì chừa chỗ sau "Topic:"', async ($, on) => {
+  const filled: string[] = []
+
+  store(on)
+  clock(on)
+  on('prompt.fill', (_, e) => {
+    filled.push(e.text)
+
+    return { isFilled: true } as never
+  })
+
+  await $.command.run({ command: 'teach-me', args: 'prompt caching' } as never)
+  await $.command.run({ command: 'teach-me', args: '' } as never)
+
+  expect(filled[0]?.endsWith('Topic: prompt caching')).toBe(true)
+  expect(filled[1]?.endsWith('Topic: ')).toBe(true)
+})
+
+test('/mascot lưu mức vào kho để phiên sau dùng lại', async ($, on) => {
+  const kept = store(on)
+
+  clock(on)
+  await $.command.run({ command: 'mascot', args: 'quiet' } as never)
+
+  expect(kept.get('nb-spike.level')).toBe('quiet')
+})

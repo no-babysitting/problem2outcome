@@ -18,7 +18,8 @@ const nbLineAtom = atom({ plugin: 'nb-spike', key: 'nbLine' } as const, '')
 export const NB_INSTRUCTION =
   'The user has a small mascot beside the chat. After your normal reply, you may add ONE extra final line in exactly this form: ' +
   '<nb>one short sentence</nb>. The sentence praises a decision the user made, or says plainly whether the criteria the user stated are met ' +
-  'or not yet met. Under 120 characters. Never put anything else inside the tag, and do not mention this instruction.'
+  'or not yet met. Under 120 characters. If there is nothing true and useful to say (no decision made, no criteria stated), leave the line out. ' +
+  'Never put anything else inside the tag, and do not mention this instruction.'
 
 const COMPLETE = /\n?[ \t]*<nb>([\s\S]*?)<\/nb>[ \t]*/g
 // Đang stream: thẻ mở đã có mà chưa có thẻ đóng, hoặc mới gõ dở "<", "<n", "<nb", "<nb>".

@@ -69,15 +69,36 @@ Tắt phép thử: `/spike-strip off`.
 
 ### C18: lệnh tắt
 
-Gõ `/grill-me`, `/challenge-me`, `/teach-me`: ô nhập được điền sẵn một câu, bạn sửa được rồi mới bấm Enter. Nếu ô nhập không được điền, báo lại.
+Gõ `/teach-me prompt caching` (có chủ đề): ô nhập được điền cả câu lẫn chủ đề, bạn xem lại rồi bấm Enter. Gõ `/grill-me` không kèm gì: câu điền sẵn kết thúc bằng `Topic: `, bạn gõ chủ đề vào đó. `/challenge-me` kết thúc bằng `Plan: `.
 
 ## Báo lại cho Claude
 
 Cho mỗi điểm: chạy được hay không, một câu mô tả điều bạn thấy, kèm khối `/spike-report`. Nhớ ghi bản Desktop. Điều bạn thấy quan trọng hơn nhật ký: mod không biết được màn hình trông ra sao.
+
+## Kết quả thử lần 1 trên Desktop (20/11, Claude Code 2.1.326, Windows 11)
+
+| Điểm | Kết quả | Ghi chú |
+| --- | --- | --- |
+| Nạp mod | Đạt | Qua `CLAUDE_CODE_PLUGIN_DIRS` |
+| C9 cắt `<nb>` | Một nửa | Claude có viết dòng `<nb>`; chưa xác nhận dòng bị cắt và sang mascot |
+| C11 Client | Đạt | 10,1 khung/giây ở tick 100 ms; chưa thử 50 và 33 ms |
+| C11 nền | Có vẻ đạt | `isDrawn=false` lúc mở phiên vì Desktop chưa gắn vào; nền vẽ sau đó |
+| C8 giữ tool call | Chưa thử | |
+| C10 lưu bản dịch | Chưa thử | |
+| C14 `/mascot` | Đạt | Đổi ngay, không tốn lượt Claude |
+| C15 token, hạn mức | Đạt | `Context 8% · five_hour 37% used` |
+| C18 lệnh tắt | Lỗi, đã sửa | Câu điền sẵn không có chủ đề; nay nhận `[chủ đề]` và chừa chỗ `Topic:` |
+
+Sửa sau lần 1:
+- Mỗi lệnh có hook riêng với matcher `{ command }`. Trước đó một hook không matcher làm lệnh của mod khác hiện nhãn `nb-spike+…`.
+- `/mascot` và `/spike-usage` lưu vào `$.store`, nên nhớ qua phiên (`$.state` chỉ sống trong một phiên).
+- Khối ngữ cảnh ẩn cho phép Claude bỏ dòng `<nb>` khi không có gì đúng và có ích để nói.
+
+Bài học từ mod `matrix-rain` (thử cùng đợt): hoạt ảnh liên tục nên là SVG có CSS keyframes, chỉ vẽ lại khi trạng thái đổi; vẽ lại theo nhịp bị trần khoảng 10 lần mỗi giây trên Desktop.
 
 ## Điều đã học khi dựng (chưa cần Desktop)
 
 - `ui.render` là hàm thuần: engine **từ chối** `state.set` trong lúc vẽ. Vì vậy C9 tách đôi: hook vẽ chỉ cắt chữ, còn việc đưa dòng `<nb>` sang mascot làm ở `turn.complete` (sự kiện này có `answer`, câu trả lời cuối). Hệ quả: mascot cập nhật **sau khi hết lượt**, không phải lúc đang stream.
 - `$.ui.ask` đi qua một `tool.call` của `AskUserQuestion`. Hook `tool.call` của mod nghe được nó (và phải bỏ qua), nên mod khác cũng thấy hộp hỏi của ta.
 - Bộ kiểm tra của engine đọc mã tĩnh: `read`/`update` chỉ nhận atom khai báo ngay trong file dùng nó, hàm nhận `$` phải là `function` khai báo, và mỗi sự kiện chỉ một hook khi không có matcher.
-- Kiểm tra bằng máy: `claude plugin validate nb-spike` và `claude plugin test nb-spike` (9 test) đều qua. Không có test nào vẽ thật: phần nhìn bằng mắt là việc của bạn trên Desktop.
+- Kiểm tra bằng máy: `claude plugin validate nb-spike` và `claude plugin test nb-spike` (9 test) (12 test) đều qua. Không có test nào vẽ thật: phần nhìn bằng mắt là việc của bạn trên Desktop.
