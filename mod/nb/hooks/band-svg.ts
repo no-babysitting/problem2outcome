@@ -65,6 +65,69 @@ const scrambles = (state: ColleagueState): [string, string] => {
   return [`[${g(1)}_${g(2)}]`, `[${g(3)}${g(4)}${g(5)}]`]
 }
 
+/** Same input, same picture: a tiny hash so each state's aura is fixed (DS: the face never changes at random). */
+const h01 = (a: number, b: number, k: number): number => {
+  const x = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453
+
+  return x - Math.floor(x)
+}
+
+/**
+ * The Colleague's portrait: a square tile (1px line, the DS accent square) with an ASCII aura around the face.
+ * The aura tells the state in the site's ASCII language: idle is near empty, thinking a ring of dots,
+ * working the lines of a running log, asking a few question marks, overloaded noise, verified order (a grid).
+ */
+export function portrait(state: ColleagueState, x: number, y: number, w: number, h: number): string {
+  const f = FACES[state]
+  const cw = 5
+  const ch = 8
+  const cols = Math.floor((w - 12) / cw)
+  const rows = Math.floor((h - 10) / ch)
+  const ox = x + (w - cols * cw) / 2
+  const oy = y + (h - rows * ch) / 2
+  const faceHalfW = ((f.face.length + (f.tail === '' ? 0 : 1)) * 13.9) / 2 + 3
+  const glyphs: string[] = []
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const dx = (c + 0.5) * cw - (cols * cw) / 2
+      const dy = (r + 0.5) * ch - (rows * ch) / 2
+
+      if (Math.abs(dx) < faceHalfW && Math.abs(dy) < 10) {
+        continue
+      }
+      const rr = Math.min(1.2, Math.hypot(dx / ((cols * cw) / 2), dy / ((rows * ch) / 2)))
+      const n = h01(c, r, 3)
+      let g = ''
+
+      if (state === 'idle') {
+        g = n < 0.16 * (1.15 - rr) ? '·' : ''
+      } else if (state === 'thinking') {
+        g = n < 0.75 * Math.exp(-((rr - 0.82) ** 2) / 0.03) ? '·∙°.'.charAt(Math.floor(h01(c, r, 5) * 4)) : ''
+      } else if (state === 'working') {
+        g = r % 2 === 0 && n < 0.8 - 0.35 * rr ? '≡=-'.charAt(Math.floor(h01(c, r, 7) * 3)) : ''
+      } else if (state === 'asking') {
+        g = n < 0.09 ? '?' : n < 0.2 * (1.1 - rr) ? '·' : ''
+      } else if (state === 'overloaded') {
+        g = n < 0.62 ? '#%&@*/\\<>!'.charAt(Math.floor(h01(c, r, 9) * 10)) : ''
+      } else {
+        g = c % 3 === 1 && r % 2 === 0 && rr < 1.05 ? '+' : c % 3 === 1 && rr < 1.05 ? '·' : ''
+      }
+      if (g !== '') {
+        const op = (0.42 + 0.5 * Math.max(0, 1 - rr)).toFixed(2)
+
+        glyphs.push(`<text x="${(ox + c * cw).toFixed(1)}" y="${(oy + (r + 1) * ch - 1.5).toFixed(1)}" fill-opacity="${op}">${xml(g)}</text>`)
+      }
+    }
+  }
+
+  return (
+    `<rect x="${x + 0.5}" y="${y + 0.5}" width="${w - 1}" height="${h - 1}" fill="${NB.bgSunken}" stroke="${NB.line}"/>` +
+    `<rect x="${x}" y="${y}" width="4" height="4" fill="${NB.accent}"/>` +
+    `<g class="aura" fill="${f.color}">${glyphs.join('')}</g>`
+  )
+}
+
 const meter = (percent: number): string => {
   const cells = 8
   const full = Math.max(0, Math.min(cells, Math.round((percent / 100) * cells)))
@@ -86,10 +149,13 @@ export function bandSVG(m: BandModel): string {
   const [s1, s2] = scrambles(m.state)
 
   // ---- row 1: face and bubble ----
-  const faceX = 12
-  const faceY = 30
-  const bubbleX = 112
-  const lines = m.line === '' ? [] : wrap(m.line, 440)
+  // The portrait takes the band's full height on the left; the bubble and meter share row 1, the decisions row 2.
+  const tile = { x: 8, y: 4, w: 104, h: BAND_H - 8 }
+  const left = tile.x + tile.w + 14
+  const faceX = tile.x + tile.w / 2
+  const faceY = tile.y + tile.h / 2 + 7
+  const bubbleX = left + 8
+  const lines = m.line === '' ? [] : wrap(m.line, 380)
   const bw = lines.length === 0 ? 0 : Math.ceil(Math.max(...lines.map(sansWidth))) + 28
   const bh = lines.length === 2 ? 44 : 30
   const by = lines.length === 2 ? 2 : 9
@@ -109,7 +175,7 @@ export function bandSVG(m: BandModel): string {
   let strip = ''
 
   if (d === null) {
-    strip = `<text x="12" y="66" class="mono quiet">${xml(ui.noTask)}</text>`
+    strip = `<text x="${left}" y="66" class="mono quiet">${xml(ui.noTask)}</text>`
   } else {
     const spans: string[] = []
 
@@ -132,21 +198,23 @@ export function bandSVG(m: BandModel): string {
         spans.push(`<tspan dx="3" class="cur">▍</tspan>`)
       }
     }
-    strip = `<text x="12" y="66" class="mono">${spans.join('')}</text>`
+    strip = `<text x="${left}" y="66" class="mono">${spans.join('')}</text>`
   }
 
   const ctx = m.contextPercent
   const lim = m.limit
-  const meterText =
+  // The meter sits top right in two quiet lines, so the decisions keep row 2 to themselves.
+  const meterSvg =
     ctx === null
       ? ''
-      : `${ui.context} ${meter(ctx)} ${Math.round(ctx)}%` +
-        (lim === null ? '' : `  ·  ${limitWords(m.lang, lim.kind)} ${Math.round(lim.percentUsed)}%`)
-  const meterSvg = meterText === '' ? '' : `<text x="${BAND_W - 12}" y="66" text-anchor="end" class="mono quiet">${xml(meterText)}</text>`
+      : `<text x="${BAND_W - 12}" y="20" text-anchor="end" class="mono quiet">${xml(`${ui.context} ${meter(ctx)} ${Math.round(ctx)}%`)}</text>` +
+        (lim === null
+          ? ''
+          : `<text x="${BAND_W - 12}" y="36" text-anchor="end" class="mono quiet">${xml(`${limitWords(m.lang, lim.kind)} ${Math.round(lim.percentUsed)}%`)}</text>`)
 
   const css =
     `.mono{font:600 11.5px ${MONO}}.say{font:400 13px ${SANS};fill:${NB.fg}}` +
-    `.face{font:600 21px ${MONO}}.tail{font:600 17px ${MONO}}` +
+    `.face{font:600 23px ${MONO};text-anchor:middle}.tail{font:600 18px ${MONO}}.aura text{font:400 8px ${MONO}}.aura{animation:aura .6s ease-out 1 both}@keyframes aura{from{opacity:0}to{opacity:1}}` +
     `.done{fill:${NB.fgMuted}}.ok{fill:${NB.signal};font-weight:700}.next{fill:${NB.fg}}.cur{fill:${NB.accent};animation:blink 1.1s steps(1,end) 3}` +
     `.later,.quiet{fill:${NB.fgSubtle}}.stale{opacity:.62}` +
     `.flash{animation:flash .9s ease-out 1 both}@keyframes flash{0%{fill:${NB.fg}}20%{fill:${NB.signal};font-size:15px}100%{fill:${NB.signal}}}` +
@@ -155,7 +223,7 @@ export function bandSVG(m: BandModel): string {
     `.pulse{animation:pulse 1.4s ease-in-out 3 alternate both}` +
     `@keyframes sc0{0%{opacity:1}33%{opacity:0}}@keyframes sc1{0%{opacity:0}33%{opacity:1}66%{opacity:0}}` +
     `@keyframes real{0%{opacity:0}66%{opacity:1}100%{opacity:1}}@keyframes blink{50%{opacity:0}}@keyframes pulse{from{fill-opacity:.45}to{fill-opacity:1}}` +
-    `@media (prefers-reduced-motion:reduce){.sc0,.sc1{animation:none;opacity:0}.real,.cur,.pulse,.flash{animation:none;opacity:1;fill-opacity:1}}`
+    `@media (prefers-reduced-motion:reduce){.sc0,.sc1{animation:none;opacity:0}.real,.cur,.pulse,.flash,.aura{animation:none;opacity:1;fill-opacity:1}}`
 
   const tailCls = m.state === 'working' || m.state === 'thinking' ? 'tail pulse' : 'tail'
   const alt = `${m.lang === 'vi' ? 'Đồng nghiệp' : 'Colleague'}: ${STATE_WORDS[m.lang][m.state]}`
@@ -164,13 +232,14 @@ export function bandSVG(m: BandModel): string {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${BAND_W}" height="${BAND_H}" viewBox="0 0 ${BAND_W} ${BAND_H}" role="img" class="nbb" aria-label="${xml(alt)}">` +
     `<style>${scopeCSS(css, 'nbb')}</style>` +
     `<rect width="${BAND_W}" height="${BAND_H}" fill="${NB.bg}" fill-opacity=".86"/>` +
+    portrait(m.state, tile.x, tile.y, tile.w, tile.h) +
     `<text x="${faceX}" y="${faceY}" class="face sc sc0" fill="${f.color}">${xml(s1)}</text>` +
     `<text x="${faceX}" y="${faceY}" class="face sc sc1" fill="${f.color}">${xml(s2)}</text>` +
     `<g class="real"><text x="${faceX}" y="${faceY}" class="face" fill="${f.color}">${xml(f.face)}` +
     (f.tail === '' ? '' : `<tspan dx="2" class="${tailCls}">${xml(f.tail)}</tspan>`) +
     `</text></g>` +
     bubble +
-    `<line x1="12" x2="${BAND_W - 12}" y1="47.5" y2="47.5" stroke="${NB.line}" stroke-dasharray="2 4"/>` +
+    `<line x1="${left}" x2="${BAND_W - 12}" y1="47.5" y2="47.5" stroke="${NB.line}" stroke-dasharray="2 4"/>` +
     strip +
     meterSvg +
     `</svg>`
