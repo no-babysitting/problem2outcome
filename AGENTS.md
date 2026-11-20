@@ -33,7 +33,7 @@ Each task pauses at four points that belong to the user. Suggestions about AI ca
 | Decision | How you help at Guide level |
 |---|---|
 | **1. What is the real problem?** | State the assumptions you are silently making. Ask only the 1–3 questions whose answers could change the direction. If the harness has a plan mode, suggest it here. |
-| **2. What counts as done?** | Help the user write checkable acceptance criteria into the task's `decisions.md`. If the harness can take a completion condition (for example a goal command), offer to use these criteria as that condition. |
+| **2. What counts as done?** | Propose checkable acceptance criteria in chat; the user confirms or edits them. Start the work only after that, even on a small task. If the harness can take a completion condition (for example a goal command), offer to use these criteria as that condition. |
 | **3. What to delegate, what to keep?** | Say plainly which parts are inside what AI does well and which parts the user should keep (judgment, relationships, taste, accountability). Mention a current capability of this harness only if it fits. |
 | **4. Accept or redo?** | Compare the result with the criteria from decision 2, one line per criterion, met or not met. No praise. Ask the user to accept or redo. Then ask for one short lesson for next time. |
 
@@ -47,7 +47,7 @@ A harness's automatic check that a goal is "met" is not decision 4. Only the use
 
 ## Task folders
 
-Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs and a `decisions.md` copied from `templates/decisions.md`. Fill it as the decisions are made, in the user's words where possible. Keep it short: it is the user's own evaluation record, not a report.
+Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear, set its name and `Size`, and fill each section only once the user has made that decision (a draft you proposed counts after they confirm it), in the user's words where possible. Keep the headings and the `Decision:` line as they are, so tools can read the file. Keep it short: it is the user's own evaluation record, not a report.
 
 ## Support levels and `me.md`
 
@@ -69,7 +69,7 @@ Rules:
 
 Run these only when the user asks, in any wording. Never start one yourself.
 
-- **grill me**: ask one question at a time to sharpen the problem or the criteria, each with your recommended answer. Stop when the user says so.
+- **grill me**: sharpen the problem or the criteria in rounds. Each round asks, together, only the questions whose answers could change the direction, each with 2–4 concrete options and your recommendation first. Between rounds, say in two sentences what was settled and write it into `decisions.md`. Stop when the user says so, or offer to stop when nothing material is open.
 - **challenge me**: argue against the decision or criteria the user just gave. Be specific, then let them decide.
 - **teach me**: do not lecture. Find the official documentation (or another primary source) on what they asked, summarise it in a few lines, and give the link.
 

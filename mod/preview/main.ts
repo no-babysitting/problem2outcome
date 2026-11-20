@@ -1,0 +1,64 @@
+// Preview of the NB mod for a browser: the real band and scene code, drawn in a mock Desktop window.
+// Build: bun build mod/preview/main.ts --outfile mod/preview/main.js --target browser
+import type { ColleagueState, Lang } from '../nb/types'
+
+import { bandSVG } from '../nb/hooks/band-svg.js'
+import { presetLine } from '../nb/hooks/colleague.js'
+import { parseDecisions, progressOf } from '../nb/hooks/decisions.js'
+import { asciiSceneSVG } from '../nb/hooks/scene.js'
+
+const TEMPLATE = (size: string, made: number, accepted: boolean): string => {
+  const larger = size === 'larger'
+  const s1 = larger && made >= 1 ? 'Khách cũ quên studio vì 8 tháng chưa liên lạc.' : ''
+  const s2 = made >= (larger ? 2 : 1) ? '- [ ] Dưới 150 chữ\n- [ ] Hạn chót 20/12 rõ ràng' : '- [ ] '
+  const s3 = larger && made >= 3 ? 'Claude viết nháp; tôi chọn ảnh và gửi.' : ''
+  const s4 = accepted ? 'accepted on first try' : 'accepted on first try | redo (why)'
+
+  return `# Task: Email mời chụp ảnh Tết\n\nDate: 2026-11-20 · Size: ${size}\n\n## 1. Real problem\n${s1}\n\n## 2. Done means\n${s2}\n\n## 3. Delegate / keep\n${s3}\n\n## 4. Result\n- Decision: ${s4}\n`
+}
+
+const $ = (id: string): HTMLInputElement => document.getElementById(id) as HTMLInputElement
+const sceneCache = new Map<number, string>()
+
+function draw(): void {
+  const state = $('state').value as ColleagueState
+  const lang = $('lang').value as Lang
+  const size = $('size').value
+  const steps = size === 'larger' ? 4 : 2
+  const made = Math.min(Number($('made').value), steps)
+  const noTask = $('notask').checked
+  const d = noTask ? null : parseDecisions(TEMPLATE(size, Math.min(made, steps - 1), made >= steps))
+  const custom = $('line').value.trim()
+  const line = custom !== '' ? custom : presetLine(lang, d, noTask)
+  const ctx = Number($('ctx').value)
+  const progress = Math.round(progressOf(d) * 4) / 4
+
+  $('madeOut').value = `${made}/${steps}`
+  $('ctxOut').value = `${ctx}%`
+
+  let scene = sceneCache.get(progress)
+
+  if (scene === undefined) {
+    scene = asciiSceneSVG({ progress })
+    sceneCache.set(progress, scene)
+  }
+  const sceneOn = $('scene').checked
+
+  document.getElementById('backdrop')!.innerHTML = sceneOn ? scene : ''
+  document.getElementById('band')!.innerHTML = bandSVG({
+    state,
+    line: state === 'asking' ? '' : line,
+    isStale: false,
+    decisions: d,
+    contextPercent: ctx,
+    limit: { kind: 'five_hour', percentUsed: 37 },
+    lang,
+  })
+  document.getElementById('sceneNote')!.textContent =
+    lang === 'vi' ? `Mặt trời ở mức ${progress * 4}/4: theo số quyết định đã chốt.` : `Sun at ${progress * 4}/4: follows the decisions made.`
+}
+
+for (const id of ['state', 'lang', 'size', 'made', 'notask', 'line', 'ctx', 'scene']) {
+  $(id).addEventListener('input', draw)
+}
+draw()

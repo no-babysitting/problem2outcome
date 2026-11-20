@@ -1,0 +1,9 @@
+{
+  "name": "nb",
+  "version": "0.1.0",
+  "description": "No Babysitting for Claude Desktop: The Colleague above the prompt, your task's four decisions, a calm context meter, a coloured ASCII scene whose sun rises as you decide, and the grill-me, challenge-me and teach-me skills.",
+  "author": { "name": "No Babysitting" },
+  "homepage": "https://github.com/no-babysitting/problem2outcome",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

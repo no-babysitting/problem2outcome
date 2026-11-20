@@ -1,0 +1,446 @@
+// NB: the optional Claude Desktop mod for the problem2outcome workspace.
+//
+// What it adds (each piece traces to the PDD):
+//   - The Colleague above the prompt: its face follows what really happens (prompt, tools, a question, the end
+//     of a turn), and a speech bubble carries at most one sentence per turn (M3, C9).
+//   - The task's four decisions under it, read from the newest tasks/*/decisions.md (zero tokens).
+//   - A calm context and rate-limit meter, no red zones (C15).
+//   - A coloured ASCII scene behind the chat; its sun rises as the user makes their decisions (C11).
+//   - One question before the first file is written, only when the task has no criteria yet (M4, C8).
+//   - Zero-token commands: /nb, /mascot, /nb-lang, /nb-scene (C14).
+// The skills /grill-me, /challenge-me and /teach-me live in ../skills and need no code.
+//
+// Everything stays on the user's machine: the mod reads files in the workspace and calls no network.
+import { atom, read, update } from 'claude-code'
+import type { EngineInterface, Register, ThemeSetArgs } from 'claude-code'
+
+import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '../types'
+
+import { bandSVG, bandText } from './band-svg.js'
+import { nbInstruction, presetLine, STATE_WORDS, strip, UI } from './colleague.js'
+import { languageOf, parseDecisions, progressOf } from './decisions.js'
+import { makeColors } from './make-colors.js'
+import { asciiSceneSVG } from './scene.js'
+
+type Dollar = EngineInterface
+
+const stateAtom = atom({ plugin: 'nb', key: 'state' } as const, 'idle' as ColleagueState)
+const busyAtom = atom({ plugin: 'nb', key: 'busy' } as const, 0)
+const bubbleAtom = atom({ plugin: 'nb', key: 'bubble' } as const, { text: '', isStale: false } as Bubble, { shape: 'bubble-1' })
+const usageAtom = atom({ plugin: 'nb', key: 'usage' } as const, { contextPercent: null, limit: null } as Usage, { shape: 'usage-1' })
+const taskAtom = atom({ plugin: 'nb', key: 'task' } as const, null as TaskDecisions | null, { shape: 'task-1' })
+const firstRunAtom = atom({ plugin: 'nb', key: 'isFirstRun' } as const, false)
+const levelAtom = atom({ plugin: 'nb', key: 'level' } as const, 'normal' as Level)
+const langAtom = atom({ plugin: 'nb', key: 'lang' } as const, 'en' as Lang)
+const sceneAtom = atom({ plugin: 'nb', key: 'scene' } as const, true)
+const askedAtom = atom({ plugin: 'nb', key: 'asked' } as const, false)
+
+const SCENE = 'nb-dawn'
+const STALE_MS = 15000
+const LEVELS: readonly Level[] = ['quiet', 'normal', 'chatty']
+const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+
+const COMMANDS = [
+  { name: 'nb', description: 'NB: where your task stands, and the mod settings' },
+  { name: 'mascot', description: 'NB: how much The Colleague talks', argumentHint: 'quiet|normal|chatty' },
+  { name: 'nb-lang', description: 'NB: language of the mod (en or vi)', argumentHint: 'en|vi' },
+  { name: 'nb-scene', description: 'NB: the ASCII scene behind the chat', argumentHint: 'on|off' },
+]
+
+// ---------- look: NB website tokens (design-system/tokens.css), dark ----------
+
+const { theme: COLORS } = makeColors({
+  label: 'No Babysitting',
+  roles: { accent: '#d97a4a', danger: '#ee7a66', success: '#8cc084', warning: '#e2b04a', pro: '#8fb3d9' },
+  dark: {
+    gray: {
+      anchors: {
+        'surface-0': '#14120f',
+        'surface-1': '#1c1916',
+        'surface-2': '#211d19',
+        'surface-3': '#241f1b',
+        'text-primary': '#ede6da',
+        'text-secondary': '#ada395',
+        'text-muted': '#8d8376',
+      },
+    },
+  },
+  only: 'dark',
+})
+
+// Messages sit on near-solid NB surfaces so the words keep their contrast over the scene. Square corners (DS).
+const STYLE: ThemeSetArgs['style'] = {
+  UserMessage: { backgroundColor: '#1c1916f2', borderColor: '#2e2924', borderWidth: 1, radius: 0, paddingX: 14, paddingY: 10 },
+  AssistantMessage: { backgroundColor: '#14120fe6', radius: 0, paddingX: 14, paddingY: 10 },
+  ToolUse: { fontFamily: ['code'], backgroundColor: '#0f0d0bd9', radius: 0, paddingX: 10 },
+}
+
+const GLASS = { blur: 0, tint: '#14120f', opacity: 0.18 } as const
+
+function look(withScene: boolean): ThemeSetArgs {
+  return {
+    colors: COLORS,
+    backdrop: withScene ? { scene: SCENE, glass: GLASS } : { color: '#14120f' },
+    style: STYLE,
+  } as ThemeSetArgs
+}
+
+async function applyLook($: Dollar): Promise<void> {
+  const withScene = await read($, sceneAtom)
+
+  try {
+    const set = await $.theme.set(look(withScene))
+
+    if (!set.isDrawn) {
+      $.ui.log(`nb: theme not drawn: ${set.reason}`, { to: 'debug' })
+    }
+  } catch (error) {
+    // An older build may refuse `style`: set the rest.
+    $.ui.log(`nb: theme.set refused (${String(error)}); retrying without style`, { to: 'debug' })
+    const { style: _style, ...rest } = look(withScene)
+
+    await $.theme.set(rest as ThemeSetArgs).catch(() => undefined)
+  }
+}
+
+// ---------- workspace: me.md and the newest task ----------
+
+async function readWorkspace($: Dollar): Promise<void> {
+  const hasMe = await $.fs.exists('me.md').catch(() => false)
+
+  if (hasMe) {
+    const lang = languageOf(await $.fs.read('me.md').catch(() => ''))
+
+    if (lang !== null && (await $.store.get('nb.lang')) === undefined) {
+      await update($, langAtom, () => lang)
+    }
+  }
+  await update($, firstRunAtom, () => !hasMe)
+  await refreshTask($)
+}
+
+async function refreshTask($: Dollar): Promise<TaskDecisions | null> {
+  const entries = await $.fs.list('tasks').catch(() => [])
+  let best: { name: string; mtime: number } | null = null
+
+  for (const entry of entries) {
+    if (entry.kind !== 'dir') {
+      continue
+    }
+    const stat = await $.fs.stat(`tasks/${entry.name}/decisions.md`).catch(() => null)
+
+    if (stat !== null && (best === null || stat.mtimeMs > best.mtime)) {
+      best = { name: entry.name, mtime: stat.mtimeMs }
+    }
+  }
+
+  const task = best === null ? null : parseDecisions(await $.fs.read(`tasks/${best.name}/decisions.md`).catch(() => ''), best.name)
+
+  await update($, taskAtom, () => task)
+
+  return task
+}
+
+function summarize(u: any): Usage {
+  const limits: { kind: string; percentUsed: number }[] = (u?.rateLimits ?? []).map((r: any) => ({
+    kind: String(r.kind),
+    percentUsed: Number(r.percentUsed),
+  }))
+  const limit = limits.length === 0 ? null : limits.reduce((a, b) => (b.percentUsed > a.percentUsed ? b : a))
+  const percent = u?.context?.percent
+
+  return { contextPercent: typeof percent === 'number' ? percent : null, limit }
+}
+
+async function loadSettings($: Dollar): Promise<void> {
+  const savedLevel = await $.store.get('nb.level')
+  const level = LEVELS.find(l => l === savedLevel)
+  const lang = await $.store.get('nb.lang')
+  const scene = await $.store.get('nb.scene')
+
+  if (level !== undefined) {
+    await update($, levelAtom, () => level)
+  }
+  if (lang === 'en' || lang === 'vi') {
+    await update($, langAtom, () => lang)
+  }
+  if (typeof scene === 'boolean') {
+    await update($, sceneAtom, () => scene)
+  }
+}
+
+async function say($: Dollar, text: string): Promise<void> {
+  await update($, bubbleAtom, () => ({ text, isStale: false }))
+  if (text !== '') {
+    $.clock.after(STALE_MS, () => {
+      void update($, bubbleAtom, (b: Bubble) => (b.text === text ? { ...b, isStale: true } : b))
+    })
+  }
+}
+
+// ---------- commands (zero tokens) ----------
+
+async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ text: string }> {
+  const arg = rawArgs.trim().toLowerCase()
+  const lang = await read($, langAtom)
+  const vi = lang === 'vi'
+
+  if (name === 'mascot') {
+    const level = LEVELS.find(l => l === arg)
+
+    if (level === undefined) {
+      return { text: vi ? `Mức hiện tại: ${await read($, levelAtom)}. Dùng /mascot quiet, normal hoặc chatty.` : `Now: ${await read($, levelAtom)}. Use /mascot quiet, normal or chatty.` }
+    }
+    await update($, levelAtom, () => level)
+    await $.store.set('nb.level', level)
+    if (level === 'quiet') {
+      await say($, '')
+    }
+
+    return { text: vi ? `The Colleague: ${level}.` : `The Colleague: ${level}.` }
+  }
+
+  if (name === 'nb-lang') {
+    if (arg !== 'en' && arg !== 'vi') {
+      return { text: vi ? 'Dùng /nb-lang en hoặc /nb-lang vi.' : 'Use /nb-lang en or /nb-lang vi.' }
+    }
+    await update($, langAtom, () => arg)
+    await $.store.set('nb.lang', arg)
+    await say($, presetLine(arg, await read($, taskAtom), await read($, firstRunAtom)))
+
+    return { text: arg === 'vi' ? 'NB nói tiếng Việt.' : 'NB speaks English.' }
+  }
+
+  if (name === 'nb-scene') {
+    if (arg !== 'on' && arg !== 'off') {
+      return { text: vi ? 'Dùng /nb-scene on hoặc off.' : 'Use /nb-scene on or off.' }
+    }
+    await update($, sceneAtom, () => arg === 'on')
+    await $.store.set('nb.scene', arg === 'on')
+    await applyLook($)
+
+    return { text: arg === 'on' ? (vi ? 'Đã bật cảnh nền.' : 'Scene on.') : vi ? 'Đã tắt cảnh nền.' : 'Scene off.' }
+  }
+
+  // /nb: where the task stands, and the settings.
+  const task = await refreshTask($)
+  const level = await read($, levelAtom)
+  const scene = await read($, sceneAtom)
+  const words = vi ? ['vấn đề', 'xong là gì', 'giao việc', 'nghiệm thu'] : ['real problem', 'done means', 'delegate', 'accept']
+  const lines: string[] = []
+
+  if (task === null) {
+    lines.push(vi ? 'Chưa có việc nào trong tasks/. Cứ nói với Claude việc bạn muốn làm.' : 'No task in tasks/ yet. Just tell Claude what you want done.')
+  } else {
+    lines.push(`${vi ? 'Việc' : 'Task'}: ${task.name}`)
+    for (let i = 0; i < 4; i++) {
+      if (task.applies[i]) {
+        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? '✓' : task.next === i + 1 ? (vi ? '← đến lượt bạn' : '← your turn') : '·'}`)
+      }
+    }
+  }
+  lines.push('')
+  lines.push(`/mascot ${level} · /nb-lang ${lang} · /nb-scene ${scene ? 'on' : 'off'}`)
+  lines.push(vi ? 'Skill: /grill-me, /challenge-me, /teach-me' : 'Skills: /grill-me, /challenge-me, /teach-me')
+
+  return { text: lines.join('\n') }
+}
+
+// ---------- hooks ----------
+
+export const register: Register = on => {
+  // One session.start hook (the engine refuses two on one event without a matcher).
+  on('session.start', async ($, e, next) => {
+    for (const command of COMMANDS) {
+      await $.command.register(command)
+    }
+    await loadSettings($)
+    await readWorkspace($)
+    await update($, usageAtom, () => summarize(null))
+    await $.session
+      .usage()
+      .then(async u => update($, usageAtom, () => summarize(u)))
+      .catch(() => undefined)
+    await applyLook($)
+    if ((await read($, levelAtom)) !== 'quiet') {
+      await say($, presetLine(await read($, langAtom), await read($, taskAtom), await read($, firstRunAtom)))
+    }
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('session.measure', async ($, e, next) => {
+    await update($, usageAtom, () => summarize(e))
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // A new prompt: The Colleague starts reading, the bubble steps back, and Claude is told what the band shows.
+  on('prompt.submit', async ($, e, next) => {
+    if (e.command !== undefined || e.isMeta === true) {
+      return next(e)
+    }
+    await update($, stateAtom, () => 'thinking' as ColleagueState)
+    await say($, '')
+
+    return next({ ...e, context: [...(e.context ?? []), nbInstruction(await read($, langAtom), await read($, taskAtom))] })
+  }).catch(($, e, next) => next(e))
+
+  on('tool.call', async ($, e, next) => {
+    if (e.tool === 'AskUserQuestion') {
+      await update($, stateAtom, () => 'asking' as ColleagueState)
+      const result = await next(e)
+
+      await update($, stateAtom, () => 'thinking' as ColleagueState)
+
+      return result
+    }
+
+    // M4: ask once what "done" means before the first write, only in this workspace and only when the task has none.
+    if (WRITES.has(e.tool) && !(await read($, askedAtom))) {
+      const path = String((e as { file_path?: string }).file_path ?? '')
+      const task = await read($, taskAtom)
+      const isOwnFile = /(^|[\\/])(decisions|me)\.md$/.test(path)
+      const inWorkspace = await $.fs.exists('AGENTS.md').catch(() => false)
+
+      if (!isOwnFile && inWorkspace && (task === null || !task.made[1])) {
+        await update($, askedAtom, () => true)
+        const ui = UI[await read($, langAtom)]
+
+        await update($, stateAtom, () => 'asking' as ColleagueState)
+        const answer = await $.ui.ask(ui.holdQuestion, { header: ui.holdHeader, options: [ui.holdReady, ui.holdNotYet, ui.holdNever] }).catch(() => ui.holdReady)
+
+        await update($, stateAtom, () => 'thinking' as ColleagueState)
+        if (answer === ui.holdNotYet) {
+          return {
+            deny: 'The user wants to say what "done" means before any file is written. Ask them in one short question, write their criteria into the task\'s decisions.md, then continue.',
+          }
+        }
+      }
+    }
+
+    const busy = (await read($, busyAtom)) + 1
+
+    await update($, busyAtom, () => busy)
+    await update($, stateAtom, () => (busy > 2 ? 'overloaded' : 'working') as ColleagueState)
+    try {
+      return await next(e)
+    } finally {
+      const left = Math.max(0, (await read($, busyAtom)) - 1)
+
+      await update($, busyAtom, () => left)
+      if (left === 0) {
+        await update($, stateAtom, () => 'thinking' as ColleagueState)
+      } else if (left <= 2) {
+        await update($, stateAtom, () => 'working' as ColleagueState)
+      }
+      if (WRITES.has(e.tool) && /decisions\.md$/.test(String((e as { file_path?: string }).file_path ?? ''))) {
+        await refreshTask($)
+      }
+    }
+  }).catch(($, e, next) => (next.called ? next(e) : next(e)))
+
+  // End of the main turn: read the task again, settle the face, and say at most one sentence.
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId !== undefined) {
+      return next(e)
+    }
+    const before = await read($, taskAtom)
+    const task = await refreshTask($)
+    const hasMe = await $.fs.exists('me.md').catch(() => false)
+
+    await update($, firstRunAtom, () => !hasMe)
+    await update($, busyAtom, () => 0)
+    const justAccepted = task !== null && task.accepted && !(before?.accepted === true && before.name === task.name)
+
+    await update($, stateAtom, () => (justAccepted ? 'verified' : 'idle') as ColleagueState)
+
+    const level = await read($, levelAtom)
+    const { nb } = strip(e.answer)
+    const lang = await read($, langAtom)
+    const changed = JSON.stringify(before) !== JSON.stringify(task)
+    const preset = presetLine(lang, task, !hasMe)
+    const line = level === 'quiet' ? '' : nb !== null ? nb : level === 'chatty' || changed ? preset : ''
+
+    if (!e.isAborted) {
+      await say($, line)
+    }
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // The reply is drawn without its <nb> line (the saved transcript keeps it).
+  on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
+    const { text } = strip(e.props.text)
+
+    return text === e.props.text ? next(e) : next({ ...e, props: { ...e.props, text } })
+  })
+
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey || (e.surface !== 'desktop' && e.surface !== 'terminal')) {
+      return next(e)
+    }
+    const model = {
+      state: await read($, stateAtom),
+      line: (await read($, levelAtom)) === 'quiet' ? '' : (await read($, bubbleAtom)).text,
+      isStale: (await read($, bubbleAtom)).isStale,
+      decisions: await read($, taskAtom),
+      contextPercent: (await read($, usageAtom)).contextPercent,
+      limit: (await read($, usageAtom)).limit,
+      lang: await read($, langAtom),
+    }
+
+    if (model.state === 'asking') {
+      model.line = '' // silent while the user decides
+    }
+
+    if (e.surface === 'desktop') {
+      const { Svg } = $.ui.resolve(e)
+
+      return <Svg source={bandSVG(model)} alt={`The Colleague: ${STATE_WORDS[model.lang][model.state]}. ${model.line}`} />
+    }
+
+    const { Box, Text } = $.ui.resolve(e)
+    const t = bandText(model)
+
+    return (
+      <Box flexDirection="column">
+        <Box flexDirection="row" gap={2}>
+          <Text bold color={t.color}>
+            {t.face}
+          </Text>
+          {t.line !== '' && <Text>{t.line}</Text>}
+        </Box>
+        <Box flexDirection="row" gap={3}>
+          <Text dimColor>{t.strip}</Text>
+          {t.meter !== '' && <Text dimColor>{t.meter}</Text>}
+        </Box>
+      </Box>
+    )
+  })
+
+  // The scene is redrawn only when the share of decisions made changes.
+  const sceneCache = new Map<number, string>()
+
+  on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
+    if ((e.surface !== 'desktop' && e.surface !== 'mobile') || e.props.scene !== SCENE) {
+      return next(e)
+    }
+    const progress = Math.round(progressOf(await read($, taskAtom)) * 4) / 4
+    let source = sceneCache.get(progress)
+
+    if (source === undefined) {
+      source = asciiSceneSVG({ progress })
+      sceneCache.set(progress, source)
+    }
+    const { Svg } = $.ui.resolve(e)
+
+    return <Svg source={source} alt="A lake among hills drawn in coloured characters; the sun rises as you make your decisions." isInteractive />
+  })
+
+  // One hook per command, each with a literal matcher, so other mods' commands pass untouched.
+  on('command.run', { command: 'nb' }, async ($, e) => runCommand($, 'nb', e.args)).catch(($, e, next) => next(e))
+  on('command.run', { command: 'mascot' }, async ($, e) => runCommand($, 'mascot', e.args)).catch(($, e, next) => next(e))
+  on('command.run', { command: 'nb-lang' }, async ($, e) => runCommand($, 'nb-lang', e.args)).catch(($, e, next) => next(e))
+  on('command.run', { command: 'nb-scene' }, async ($, e) => runCommand($, 'nb-scene', e.args)).catch(($, e, next) => next(e))
+}
