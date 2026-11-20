@@ -7,6 +7,7 @@
 import type { ColleagueState, Lang, TaskDecisions } from '../types'
 
 import { DECISION_WORDS, FACES, NB, STATE_WORDS, UI } from './colleague.js'
+import { scopeCSS } from './scope.js'
 
 export type BandModel = {
   state: ColleagueState
@@ -148,8 +149,8 @@ export function bandSVG(m: BandModel): string {
   const alt = `${f.face}${f.tail} ${STATE_WORDS[m.lang][m.state]}`
 
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${BAND_W}" height="${BAND_H}" viewBox="0 0 ${BAND_W} ${BAND_H}" role="img" aria-label="${xml(alt)}">` +
-    `<style>${css}</style>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${BAND_W}" height="${BAND_H}" viewBox="0 0 ${BAND_W} ${BAND_H}" role="img" class="nbb" aria-label="${xml(alt)}">` +
+    `<style>${scopeCSS(css, 'nbb')}</style>` +
     `<rect width="${BAND_W}" height="${BAND_H}" fill="${NB.bg}" fill-opacity=".86"/>` +
     `<text x="${faceX}" y="${faceY}" class="face sc sc0">${xml(s1)}</text>` +
     `<text x="${faceX}" y="${faceY}" class="face sc sc1">${xml(s2)}</text>` +

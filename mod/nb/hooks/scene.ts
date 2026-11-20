@@ -9,8 +9,10 @@
 // the website's M11 "from noise to order" told with light. The subject sits right and high, away from the
 // middle (the chat) and the foot (the message box).
 
+import { scopeCSS } from './scope.js'
+
 type RGB = [number, number, number]
-type Mood = { sky: [number, RGB][]; sun: RGB; cloud: RGB; ridges: [RGB, RGB, RGB]; water: [RGB, RGB]; sunUp?: number; sunR?: number }
+type Mood = { sky: [number, RGB][]; sun: RGB; cloud: RGB; ridges: [RGB, RGB, RGB]; water: [RGB, RGB]; sunUp?: number; sunR?: number; rays?: number }
 
 // Ký hiệu, không chữ cái: màu mang hình, nét chữ chỉ mang mật độ (như ảnh tham chiếu của taisei).
 const RAMP = ' ·.:-=+*#%@'
@@ -85,10 +87,22 @@ export const MOODS: Record<'dusk' | 'dawn' | 'night', Mood> = {
   },
 }
 
+const HZ = 0.64
+const SX = 0.8
+/** Đỉnh núi lớp k tại u (0 = xa nhất). Núi xa cao và mềm, núi gần thấp và gắt; mặt trời nằm trong thung lũng của dãy xa. */
+const ridgeAt = (k: number, u: number, n: number): number => {
+  const base = HZ - 0.04 * (n - 1 - k)
+  const amp = [0.26, 0.16, 0.08][k] ?? 0.08
+  // Núi cao dần về mép trái để đóng khung cảnh.
+  const valley = (0.25 + 0.75 * ss(0.05, 0.3, Math.abs(u - SX))) * (0.7 + 0.5 * (1 - u))
+
+  return base - 0.01 - ss(0.3, 0.66, fbm(u * (1.8 + k * 2.2) + k * 5, 1 + k, 4 + k)) * amp * valley
+}
+
 /** Màu của cảnh tại (u, v), 0..1. `phase` chỉ đổi mặt hồ, để làm các khung gợn sóng. */
-export const shade = (u: number, v: number, asp: number, m: Mood, phase: number) => {
-  const hz = 0.64
-  const sx = 0.8
+export const shade = (u: number, v: number, asp: number, m: Mood, phase: number, cell?: { du: number; dv: number }) => {
+  const hz = HZ
+  const sx = SX
   const sy = hz - (m.sunUp ?? 0.19)
   const dx = (u - sx) * asp
   const dy = v - sy
@@ -96,6 +110,10 @@ export const shade = (u: number, v: number, asp: number, m: Mood, phase: number)
   let c: RGB
   let lit = 1
   let isSun = false
+  // Nét viền núi theo độ dốc (/ \\ _ -), và tia nắng: ký hiệu đặt tay, cho cảnh có đường nét chứ không chỉ mật độ.
+  let edge = ''
+  // 1 ở tâm mặt trời, 0 ở mép đĩa, -1 ngoài đĩa: đĩa được tô theo bán kính, không phải một khối @ phẳng.
+  let core = -1
 
   if (v < hz) {
     c = ramp(m.sky, v / hz)
@@ -117,17 +135,33 @@ export const shade = (u: number, v: number, asp: number, m: Mood, phase: number)
     if (dist < R) {
       c = mix([255, 248, 230], m.sun, ss(R * 0.35, R, dist) * 0.85)
       isSun = true
+      core = 1 - dist / R
+    } else if (dist < R * 1.35) {
+      // Một vành tối mỏng tách đĩa khỏi quầng sáng, để mắt đọc ra hình tròn.
+      lit *= 0.3
+      isSun = true
     } else if (dist < 0.26) {
       isSun = true
     }
     // Ba lớp núi, xa nhạt gần đậm. Đỉnh núi xa thấp hơn mặt trời để mặt trời ló lên.
+    // Tia nắng ngắn quanh mặt trời, dài dần theo số quyết định (rays = 0 thì không có).
+    const rays = m.rays ?? 0
+
+    if (cell && rays > 0 && dist > R * 1.5 && dist < R * (1.5 + 1.3 * rays)) {
+      const a = Math.atan2(dy, dx)
+      const step = Math.PI / 4
+      const idx = Math.round(a / step)
+      const off = Math.abs(a - idx * step) * dist
+
+      // Tia mảnh và đứt quãng (cách một ô), như nét vẽ tay trong ảnh tham chiếu.
+      if (off < Math.min(cell.dv, cell.du * asp) * 0.5 && Math.round(dist / cell.dv) % 2 === 0) {
+        edge = ['-', '\\', '|', '/'][((idx % 4) + 4) % 4] ?? '-'
+        c = mix(m.sun, c, ss(R * 1.5, R * (1.5 + 1.3 * rays), dist) * 0.7)
+        lit = 1
+      }
+    }
     for (let k = 0; k < m.ridges.length; k++) {
-      // Núi xa cao và mềm, núi gần thấp và gắt; mặt trời nằm trong một thung lũng của dãy xa.
-      const base = hz - 0.04 * (m.ridges.length - 1 - k)
-      const amp = [0.26, 0.16, 0.08][k] ?? 0.08
-      // Thung lũng quanh mặt trời, núi cao dần về mép trái để đóng khung cảnh.
-      const valley = (0.25 + 0.75 * ss(0.05, 0.3, Math.abs(u - sx))) * (0.7 + 0.5 * (1 - u))
-      const ridge = base - 0.01 - ss(0.3, 0.66, fbm(u * (1.8 + k * 2.2) + k * 5, 1 + k, 4 + k)) * amp * valley
+      const ridge = ridgeAt(k, u, m.ridges.length)
 
       if (v > ridge) {
         // Viền sáng chỉ gần mặt trời; xa mặt trời núi là khối tối, yên.
@@ -136,26 +170,46 @@ export const shade = (u: number, v: number, asp: number, m: Mood, phase: number)
         c = mix(m.ridges[k]!, m.sun, Math.max(0, rim * 0.45 + glow * glow * (0.25 - k * 0.08)))
         lit = ([0.5, 0.38, 0.28][k] ?? 0.28) + rim * 0.9
         isSun = false
+        edge = ''
+        core = -1
+        if (cell && v - cell.dv <= ridge) {
+          // Ô chứa đường đỉnh núi: chọn nét theo độ dốc tính bằng ô.
+          const slope = ((ridgeAt(k, u + cell.du, m.ridges.length) - ridgeAt(k, u - cell.du, m.ridges.length)) / 2 / cell.dv)
+          // Dốc thì / \\ hay |; thoải thì chọn _ - ‾ theo chỗ đường đỉnh cắt qua ô, để nét liền mạch.
+          const pos = (ridge - (v - cell.dv / 2)) / cell.dv
+          edge = slope < -2.2 || slope > 2.2 ? '|' : slope < -0.6 ? '/' : slope > 0.6 ? '\\' : pos < -0.2 ? '‾' : pos > 0.2 ? '_' : '-'
+          c = mix(mix(m.ridges[k]!, [236, 226, 214], 0.35 - k * 0.08), m.sun, 0.25 + 0.6 * near)
+        }
       }
     }
   } else {
     const tw = (v - hz) / (1 - hz)
 
     c = mix(m.water[0], m.water[1], ss(0, 1, tw))
-    lit = 0.8
+    lit = 0.7
+    // Bóng phản chiếu: lật trời và núi qua đường chân trời, gợn ngang theo pha; xa bờ thì nhạt dần.
+    const wob = (fbm(u * 3 + phase * 0.5, v * 40, 17) - 0.5) * (0.012 + tw * 0.05)
+    const mv = hz - (v - hz) * 1.35
+    if (mv > 0) {
+      const r = shade(u + wob, mv, asp, m, phase)
+      const k = 0.62 * (1 - tw * 0.7)
+
+      c = mix(c, mix([0, 0, 0], r.c, 0.62), k)
+      lit = 0.55 + r.lit * 0.35 * (1 - tw * 0.5)
+    }
     const wdt = 0.02 + tw * 0.1
     const streak = fbm(u * 22 + phase * 0.9, v * 70 + phase * 0.35, 9)
 
     if (Math.abs(u - sx) < wdt * (0.4 + streak) && streak > 0.47) {
       c = mix(m.sun, m.ridges[0], tw * 0.7)
       lit = 1.1 - tw * 0.4
-    } else if (fbm(u * 12 + phase * 0.6, v * 60, 12) > 0.66) {
-      c = mix(c, m.ridges[0], 0.7)
-      lit = 0.9
+    } else if (fbm(u * 12 + phase * 0.6, v * 60, 12) > 0.7) {
+      c = mix(c, m.sun, 0.25)
+      lit += 0.15
     }
   }
 
-  return { c, lit, isWater: v >= hz, isSun }
+  return { c, lit, isWater: v >= hz, isSun, edge, core }
 }
 
 const STOPS = [0, 0.3, 0.55, 0.8, 1]
@@ -175,20 +229,33 @@ export function moodFor(progress: number): Mood {
   const p = Math.max(0, Math.min(1, progress))
   const m = p < 0.5 ? blend(MOODS.night, MOODS.dusk, ss(0, 0.5, p)) : blend(MOODS.dusk, MOODS.dawn, ss(0.5, 1, p))
 
-  return { ...m, sunUp: 0.13 + 0.12 * p, sunR: 0.05 + 0.035 * ss(0, 0.6, p) }
+  return { ...m, sunUp: 0.13 + 0.14 * p, sunR: 0.05 + 0.035 * ss(0, 0.6, p), rays: ss(0.4, 1, p) }
 }
 
-type Cell = { ch: string; cl: string; isWater: boolean; isSun: boolean }
+// M11 (từ nhiễu đến trật tự): mỗi ô có một ngưỡng; "order" vượt ngưỡng thì ô hiện hình thật, chưa thì là nhiễu.
+// Ngưỡng ngẫu nhiên có thiên hướng (sweep) như renderer của website; ở đây hướng là từ mặt trời ra xa.
+const NOISE = '/\\|<>{}[]~^!?;:'
+const SWEEP = 0.62
+const NOISE_FILL = 0.26
+/** Bao nhiêu phần bức tranh đã thành hình, theo số quyết định đã chốt. Chưa quyết gì vẫn thấy được chân trời. */
+export const orderFor = (progress: number): number => 0.34 + 0.66 * Math.max(0, Math.min(1, progress))
 
-export function asciiSceneSVG(o: { cols?: number; rows?: number; mood?: keyof typeof MOODS; progress?: number; minLum?: number } = {}): string {
+type Cell = { ch: string; cl: string; isWater: boolean; t: number; noise: string; zone: 0 | 1 | 2 }
+
+export function asciiSceneSVG(
+  o: { cols?: number; rows?: number; mood?: keyof typeof MOODS; progress?: number; from?: number | null; minLum?: number; calm?: boolean } = {},
+): string {
   const cols = o.cols ?? 140
   const rows = o.rows ?? 44
   const m = o.progress != null ? moodFor(o.progress) : (MOODS[o.mood ?? 'dusk'] ?? MOODS.dusk)
   const minLum = o.minLum ?? 0.34
   const asp = (cols * 0.6) / (rows * 1.25)
+  const pTo = o.progress != null ? orderFor(o.progress) : 1
+  // Chỉ hội tụ khi tiến lên; lùi lại (làm lại) thì vẽ thẳng trạng thái mới.
+  const pFrom = o.from != null && o.progress != null ? Math.min(pTo, orderFor(o.from)) : pTo
+  const calm = o.calm ?? true
   const palette = new Map<string, string>()
 
-  // Màu được làm tròn để gộp ô liền nhau thành một đoạn, giữ SVG nhỏ.
   const cls = (rgb: RGB): string => {
     const q = rgb.map(n => Math.max(0, Math.min(255, Math.round(n / 20) * 20)))
     const key = q.join(',')
@@ -200,19 +267,37 @@ export function asciiSceneSVG(o: { cols?: number; rows?: number; mood?: keyof ty
     return palette.get(key) as string
   }
 
+  // Vùng yên: cột giữa là chỗ khung chat; không có nhiễu ở đó, và hình mờ đi để chữ luôn đọc rõ (calm của website).
+  const zoneOf = (x: number): 0 | 1 | 2 => {
+    if (!calm) {
+      return 2
+    }
+    const u = (x + 0.5) / cols
+
+    return u > 0.3 && u < 0.7 ? 0 : u > 0.25 && u < 0.75 ? 1 : 2
+  }
+
   const cell = (x: number, y: number, phase: number): Cell => {
     const u = (x + 0.5) / cols
     const v = (y + 0.5) / rows
-    const s = shade(u, v, asp, m, phase)
+    const s = shade(u, v, asp, m, phase, { du: 1 / cols, dv: 1 / rows })
+    const zone = zoneOf(x)
     let [r, g, b] = s.c
     const l = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-    // Mật độ theo độ sáng (tối thì để trống, nền thở được); hạt nhiễu nhỏ cho kết cấu, không làm rối hình.
-    const d = Math.pow(l, 1.9) * s.lit * 2.1 + (hash(x, y, 21) - 0.5) * 0.08
+    const calmK = zone === 0 ? 0.55 : zone === 1 ? 0.8 : 1
+    const d = Math.pow(l, 1.9) * s.lit * 2.1 * calmK + (hash(x, y, 21) - 0.5) * 0.08
     const set = s.isWater ? WATER : RAMP
-    const k = Math.round(Math.max(0, Math.min(1, (d - 0.08) / 0.82)) * (set.length - 1))
+    const k =
+      s.core >= 0
+        ? Math.round((0.7 + 0.3 * ss(0, 0.7, s.core)) * (set.length - 1))
+        : Math.round(Math.max(0, Math.min(1, (d - 0.08) / 0.82)) * (set.length - 1))
+    // Trật tự lan ra từ mặt trời: chưa quyết gì vẫn thấy vầng sáng; mỗi quyết định mở rộng vùng đã rõ.
+    const fromSun = Math.min(1, Math.hypot((u - SX) * asp, (v - HZ + (m.sunUp ?? 0.19)) * 1.2) / 1.25)
+    const t = Math.min(0.999, hash(x, y, 41) * (1 - SWEEP) + fromSun * SWEEP)
+    const noise = NOISE.charAt(Math.floor(hash(x, y, 43) * NOISE.length))
 
-    if (k === 0) {
-      return { ch: ' ', cl: '', isWater: s.isWater, isSun: s.isSun }
+    if (k === 0 && s.edge === '') {
+      return { ch: ' ', cl: '', isWater: s.isWater, t, noise, zone }
     }
     if (l < minLum && l > 0) {
       const f = minLum / l
@@ -221,18 +306,25 @@ export function asciiSceneSVG(o: { cols?: number; rows?: number; mood?: keyof ty
       g = Math.min(255, g * f)
       b = Math.min(255, b * f)
     }
+    if (zone !== 2) {
+      ;[r, g, b] = mix([20, 18, 15], [r, g, b], calmK)
+    }
 
-    return { ch: set[k] ?? ' ', cl: cls([r, g, b]), isWater: s.isWater, isSun: s.isSun }
+    return { ch: s.edge !== '' ? s.edge : (set[k] ?? ' '), cl: cls([r, g, b]), isWater: s.isWater, t, noise, zone }
   }
 
-  const esc = (c: string): string => (c === '<' ? '&lt;' : c === '&' ? '&amp;' : c)
-  const line = (cells: Cell[]): string => {
+  // Nhiễu chỉ phủ một phần ô, thưa hơn ở viền vùng yên, không có trong vùng yên.
+  // Nhiễu cũng thưa dần về phía dưới, để ô nhập luôn yên.
+  const hasNoise = (c: Cell, x: number, y: number): boolean =>
+    c.zone !== 0 && hash(x, y, 47) < NOISE_FILL * (c.zone === 1 ? 0.45 : 1) * (1 - 0.6 * ss(0.55, 1, y / rows))
+
+  const esc = (c: string): string => (c === '<' ? '&lt;' : c === '&' ? '&amp;' : c === '>' ? '&gt;' : c)
+  const line = (cells: { ch: string; cl: string }[]): string => {
     let out = ''
     let run = ''
     let cur = ''
 
     for (const { ch, cl } of cells) {
-      // Ô trống đi theo đoạn đang mở, để không cắt đoạn màu vô ích.
       if (ch !== ' ' && cl !== cur) {
         if (run !== '') {
           out += cur === '' ? run : `<tspan class="${cur}">${run}</tspan>`
@@ -242,18 +334,32 @@ export function asciiSceneSVG(o: { cols?: number; rows?: number; mood?: keyof ty
       }
       run += esc(ch)
     }
+    run = run.replace(/ +$/, '')
     if (run !== '') {
       out += cur === '' ? run : `<tspan class="${cur}">${run}</tspan>`
     }
 
     return out
   }
-
+  const BLANK = { ch: ' ', cl: '' }
   const LH = 16
+  const row = (y: number, cells: { ch: string; cl: string }[]): string => {
+    const body = line(cells)
+
+    return body === '' ? '' : `<text y="${(y + 1) * LH}">${body}</text>`
+  }
+
+  // Các lớp: hình đã thành (tĩnh; mặt nước có 3 khung gợn), nhiễu còn lại, vệt accent ở mép trật tự,
+  // và dải đang hội tụ (K nhóm, mỗi nhóm đổi nhiễu thành hình đúng một lần).
+  const K = 5
   const still: string[] = []
   const waves: string[][] = [[], [], []]
-  const sun: string[] = []
-  let firstWater = rows
+  const noise: string[] = []
+  const front: string[] = []
+  const bandNoise: string[][] = Array.from({ length: K }, () => [])
+  const bandFlash: string[][] = Array.from({ length: K }, () => [])
+  const bandForm: string[][] = Array.from({ length: K }, () => [])
+  const FW = 0.022
 
   for (let y = 0; y < rows; y++) {
     const cells: Cell[] = []
@@ -262,32 +368,47 @@ export function asciiSceneSVG(o: { cols?: number; rows?: number; mood?: keyof ty
       cells.push(cell(x, y, 0))
     }
     const isWaterRow = cells[0]?.isWater === true
+    const formed = cells.map(c => (c.t <= pFrom ? c : BLANK))
 
     if (isWaterRow) {
-      firstWater = Math.min(firstWater, y)
       for (let f = 0; f < 3; f++) {
-        const fc = f === 0 ? cells : cells.map((_, x) => cell(x, y, f * 1.3))
+        const fc = f === 0 ? formed : cells.map((c, x) => (c.t <= pFrom ? cell(x, y, f * 1.3) : BLANK))
 
-        waves[f]!.push(`<text y="${(y + 1) * LH}">${line(fc)}</text>`)
+        waves[f]!.push(row(y, fc))
       }
     } else {
-      // Quầng nắng nằm trên lớp riêng để "thở"; phần còn lại của hàng đứng yên.
-      const skyCells = cells.map(c => (c.isSun ? { ...c, ch: ' ', cl: '' } : c))
-      const sunCells = cells.map(c => (c.isSun ? c : { ...c, ch: ' ', cl: '' }))
+      still.push(row(y, formed))
+    }
+    noise.push(row(y, cells.map((c, x) => (c.t > pTo + FW && hasNoise(c, x, y) ? { ch: c.noise, cl: 'nz' } : BLANK))))
+    if (pTo < 1) {
+      front.push(row(y, cells.map(c => (c.t > pTo && c.t <= pTo + FW && c.zone !== 0 && c.ch !== ' ' ? { ch: c.ch, cl: 'fr' } : BLANK))))
+    }
+    if (pTo > pFrom) {
+      for (let k = 0; k < K; k++) {
+        const inBand = (c: Cell): boolean => {
+          const q = Math.min(K - 1, Math.floor(((c.t - pFrom) / (pTo - pFrom)) * K))
 
-      still.push(`<text y="${(y + 1) * LH}">${line(skyCells)}</text>`)
-      if (cells.some(c => c.isSun)) {
-        sun.push(`<text y="${(y + 1) * LH}">${line(sunCells)}</text>`)
+          return c.t > pFrom && c.t <= pTo && q === k
+        }
+
+        bandNoise[k]!.push(row(y, cells.map((c, x) => (inBand(c) && hasNoise(c, x, y) ? { ch: c.noise, cl: 'nz' } : BLANK))))
+        bandFlash[k]!.push(row(y, cells.map(c => (inBand(c) && c.ch !== ' ' ? { ch: c.ch, cl: 'fr' } : BLANK))))
+        bandForm[k]!.push(row(y, cells.map(c => (inBand(c) ? c : BLANK))))
       }
     }
   }
 
-  // Vài sao nhấp nháy ở nửa trên.
+  // Vài sao ở nửa trên, chỉ khi trời còn tối.
   const stars: string[] = []
+  const starN = Math.round(14 * (1 - Math.min(1, (o.progress ?? 0.5) * 1.2)))
 
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < starN; i++) {
     const x = Math.floor(hash(i, 3, 77) * cols)
     const y = Math.floor(hash(i, 5, 78) * rows * 0.3)
+
+    if (zoneOf(x) !== 2) {
+      continue
+    }
 
     stars.push(`<text class="st s${i % 3}" x="${(x * 7.8).toFixed(1)}" y="${(y + 1) * LH}">+</text>`)
   }
@@ -295,19 +416,39 @@ export function asciiSceneSVG(o: { cols?: number; rows?: number; mood?: keyof ty
   const css = [...palette].map(([rgb, name]) => `.${name}{fill:rgb(${rgb})}`).join('')
   const W = Math.round(cols * 7.8)
   const H = rows * LH + 4
+  const delay = (k: number): number => 0.5 + k * 0.24
+  const band =
+    pTo > pFrom
+      ? Array.from({ length: K }, (_, k) => {
+          const d = delay(k)
+
+          return (
+            `<g class="nz bo" style="animation-delay:${d.toFixed(2)}s">${bandNoise[k]!.join('')}</g>` +
+            `<g class="fr bf" style="animation-delay:${d.toFixed(2)}s">${bandFlash[k]!.join('')}</g>` +
+            `<g class="bi" style="animation-delay:${(d + 0.14).toFixed(2)}s">${bandForm[k]!.join('')}</g>`
+          )
+        }).join('')
+      : ''
   const motion =
-    '.w{opacity:0;animation:w 3.6s steps(1,end) infinite}.w0{opacity:1}.w1{animation-delay:-1.2s}.w2{animation-delay:-2.4s}' +
+    '.nz{fill:#8d8376;fill-opacity:.34}.fr{fill:#d97a4a}' +
+    '.w{opacity:0;animation:w 6s steps(1,end) infinite}.w0{opacity:1}.w1{animation-delay:-2s}.w2{animation-delay:-4s}' +
     '@keyframes w{0%{opacity:1}33.4%{opacity:0}}' +
-    '.sun{animation:b 7s ease-in-out infinite alternate}@keyframes b{from{opacity:.82}to{opacity:1}}' +
-    '.st{fill:#f4ecff;opacity:.25;animation:t 5s ease-in-out infinite alternate}.s1{animation-delay:-1.7s}.s2{animation-delay:-3.3s}@keyframes t{to{opacity:.85}}' +
-    '@media (prefers-reduced-motion:reduce){.w,.sun,.st{animation:none!important}.w1,.w2{opacity:0}}'
+    '.bo{animation:bo .01s steps(1,end) 1 both}@keyframes bo{to{opacity:0}}' +
+    '.bf{animation:bf .5s ease-out 1 both}@keyframes bf{0%{opacity:0}1%{opacity:1}100%{opacity:0}}' +
+    '.bi{animation:bi .3s ease-out 1 both}@keyframes bi{from{opacity:0}to{opacity:1}}' +
+    '.st{fill:#f4ecff;opacity:.25;animation:t 5s ease-in-out infinite alternate}.s1{animation-delay:-1.7s}.s2{animation-delay:-3.3s}@keyframes t{to{opacity:.8}}' +
+    '@media (prefers-reduced-motion:reduce){.w,.st,.bo,.bf,.bi{animation:none!important}.w1,.w2,.bo,.bf{opacity:0}}'
 
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">` +
-    `<style>text{font:13px "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre}${css}${motion}</style>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" class="nbs" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">` +
+    `<style>${scopeCSS(`text{font:13px "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre}${css}${motion}`, 'nbs')}</style>` +
     `<rect width="${W}" height="${H}" fill="#0f0d0b"/>` +
-    `<g>${still.join('')}</g><g class="sun">${sun.join('')}</g>` +
+    `<g>${stars.join('')}</g>` +
+    `<g class="nz">${noise.join('')}</g>` +
+    `<g class="fr" fill-opacity=".6">${front.join('')}</g>` +
+    `<g>${still.join('')}</g>` +
     waves.map((rowsF, f) => `<g class="w w${f}">${rowsF.join('')}</g>`).join('') +
-    `<g>${stars.join('')}</g></svg>`
+    band +
+    `</svg>`
   )
 }

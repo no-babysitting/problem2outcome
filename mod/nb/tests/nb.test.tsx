@@ -319,3 +319,4 @@ test('/nb tells where the task stands without a model call', async ($, on) => {
   expect(r.text).toMatch(/Launch newsletter/)
   expect(r.text).toMatch(/your turn/)
 })
+

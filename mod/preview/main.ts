@@ -18,7 +18,8 @@ const TEMPLATE = (size: string, made: number, accepted: boolean): string => {
 }
 
 const $ = (id: string): HTMLInputElement => document.getElementById(id) as HTMLInputElement
-const sceneCache = new Map<number, string>()
+// Like the mod: redraw only when the share of decisions changes, converging from the last one (M11).
+let shown: { progress: number; source: string } | null = null
 
 function draw(): void {
   const state = $('state').value as ColleagueState
@@ -36,12 +37,10 @@ function draw(): void {
   $('madeOut').value = `${made}/${steps}`
   $('ctxOut').value = `${ctx}%`
 
-  let scene = sceneCache.get(progress)
-
-  if (scene === undefined) {
-    scene = asciiSceneSVG({ progress })
-    sceneCache.set(progress, scene)
+  if (shown === null || shown.progress !== progress) {
+    shown = { progress, source: asciiSceneSVG({ progress, from: shown === null ? 0 : shown.progress }) }
   }
+  const scene = shown.source
   const sceneOn = $('scene').checked
 
   document.getElementById('backdrop')!.innerHTML = sceneOn ? scene : ''

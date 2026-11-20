@@ -68,11 +68,69 @@ const { theme: COLORS } = makeColors({
   only: 'dark',
 })
 
-// Messages sit on near-solid NB surfaces so the words keep their contrast over the scene. Square corners (DS).
+// Terminal brutalism from the NB design system: square boxes, 1px lines, one accent square as the mark.
+// Messages sit on solid NB surfaces so the words keep their contrast over the scene.
+const FRAME = 'M0.5 0.5H31.5V31.5H0.5Z'
 const STYLE: ThemeSetArgs['style'] = {
-  UserMessage: { backgroundColor: '#1c1916f2', borderColor: '#2e2924', borderWidth: 1, radius: 0, paddingX: 14, paddingY: 10 },
-  AssistantMessage: { backgroundColor: '#14120fe6', radius: 0, paddingX: 14, paddingY: 10 },
-  ToolUse: { fontFamily: ['code'], backgroundColor: '#0f0d0bd9', radius: 0, paddingX: 10 },
+  Heading: { fontFamily: ['mono'], fontWeight: 'semibold', letterSpacing: 0.5, color: '#ede6da' },
+  // The person's message: a raised card with a hairline frame and the accent square ■ in its corner.
+  UserMessage: {
+    backgroundColor: '#1c1916',
+    color: '#ede6da',
+    paddingX: 16,
+    paddingY: 12,
+    fill: {
+      vector: {
+        viewBox: 32,
+        slice: 8,
+        paths: [
+          { d: 'M0 0H32V32H0Z', color: '#1c1916' },
+          { d: FRAME, strokeWidth: 1, color: '#3a332c' },
+          { d: 'M0 0H5V5H0Z', color: '#d97a4a' },
+        ],
+      },
+    },
+  },
+  // Claude's words: the page itself, with a quiet rule down the left, like a log in a terminal.
+  AssistantMessage: {
+    backgroundColor: '#14120f',
+    color: '#ede6da',
+    paddingLeft: 18,
+    paddingRight: 14,
+    paddingY: 10,
+    fill: {
+      vector: {
+        viewBox: 32,
+        slice: 8,
+        paths: [
+          { d: 'M0 0H32V32H0Z', color: '#14120ff2' },
+          { d: 'M0 0H1V32H0Z', color: '#3a332c' },
+        ],
+      },
+    },
+  },
+  ToolUse: { fontFamily: ['code'], color: '#ada395', backgroundColor: '#0f0d0b', borderColor: '#2e2924', borderWidth: 1, radius: 0, paddingX: 10 },
+}
+
+// Quiet, and only once the person turns the sound on: wind on the lake, a rare water drop, short cues.
+// Pentatonic on D, so nothing ever clashes. Clicking the backdrop plays the scale left to right.
+const SOUND: ThemeSetArgs['sound'] = {
+  ambience: {
+    layers: [
+      { wave: 'brown', drone: true, gain: 0.12, filter: { type: 'lowpass', hz: 420, to: 700 } },
+      { wave: 'bell', notes: ['D5', 'E5', 'A5', 'B5', 'D6'], scatter: 0.05, gain: 0.07, attack: 0.01, release: 3 },
+    ],
+    reverb: 0.45,
+  },
+  cues: {
+    send: { layers: [{ wave: 'sine', notes: ['A5'], gain: 0.18, release: 0.25 }] },
+    tool: { layers: [{ wave: 'white', gain: 0.06, filter: { type: 'highpass', hz: 5000 }, attack: 0.002, release: 0.03 }] },
+    ask: { layers: [{ wave: 'triangle', notes: ['A4', 'D5'], step: 0.12, gain: 0.2, release: 0.5 }] },
+    done: { layers: [{ wave: 'bell', notes: ['E5', 'A5'], step: 0.09, gain: 0.22, release: 1.6 }], reverb: 0.3 },
+    error: { layers: [{ wave: 'triangle', notes: ['E4', 'C4'], step: 0.14, gain: 0.2, release: 0.5 }] },
+    compact: { layers: [{ wave: 'pink', gain: 0.12, filter: { type: 'lowpass', hz: 2400, to: 300 }, attack: 0.2, release: 0.9 }] },
+    click: { layers: [{ wave: 'bell', notes: ['D4', 'E4', 'G4', 'A4', 'B4', 'D5', 'E5'], gain: 0.16, release: 0.9 }], reverb: 0.2 },
+  },
 }
 
 const GLASS = { blur: 0, tint: '#14120f', opacity: 0.18 } as const
@@ -82,6 +140,7 @@ function look(withScene: boolean): ThemeSetArgs {
     colors: COLORS,
     backdrop: withScene ? { scene: SCENE, glass: GLASS } : { color: '#14120f' },
     style: STYLE,
+    sound: SOUND,
   } as ThemeSetArgs
 }
 
@@ -95,11 +154,17 @@ async function applyLook($: Dollar): Promise<void> {
       $.ui.log(`nb: theme not drawn: ${set.reason}`, { to: 'debug' })
     }
   } catch (error) {
-    // An older build may refuse `style`: set the rest.
-    $.ui.log(`nb: theme.set refused (${String(error)}); retrying without style`, { to: 'debug' })
-    const { style: _style, ...rest } = look(withScene)
+    // An older build may refuse `sound` or `style`: drop them one at a time.
+    $.ui.log(`nb: theme.set refused (${String(error)}); retrying without sound`, { to: 'debug' })
+    const { sound: _sound, ...noSound } = look(withScene)
 
-    await $.theme.set(rest as ThemeSetArgs).catch(() => undefined)
+    try {
+      await $.theme.set(noSound as ThemeSetArgs)
+    } catch {
+      const { style: _style, ...rest } = noSound
+
+      await $.theme.set(rest as ThemeSetArgs).catch(() => undefined)
+    }
   }
 }
 
@@ -419,23 +484,23 @@ export const register: Register = on => {
     )
   })
 
-  // The scene is redrawn only when the share of decisions made changes.
-  const sceneCache = new Map<number, string>()
+  // The scene is redrawn only when the share of decisions made changes. It then converges once from the
+  // previous share to the new one (M11, noise to order); the first draw of a session converges from nothing.
+  let shown: { progress: number; source: string } | null = null
 
   on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
     if ((e.surface !== 'desktop' && e.surface !== 'mobile') || e.props.scene !== SCENE) {
       return next(e)
     }
     const progress = Math.round(progressOf(await read($, taskAtom)) * 4) / 4
-    let source = sceneCache.get(progress)
 
-    if (source === undefined) {
-      source = asciiSceneSVG({ progress })
-      sceneCache.set(progress, source)
+    if (shown === null || shown.progress !== progress) {
+      shown = { progress, source: asciiSceneSVG({ progress, from: shown === null ? 0 : shown.progress }) }
     }
+    const source = shown.source
     const { Svg } = $.ui.resolve(e)
 
-    return <Svg source={source} alt="A lake among hills drawn in coloured characters; the sun rises as you make your decisions." isInteractive />
+    return <Svg source={source} alt="A lake among hills drawn in coloured characters. Noise turns into the picture, and the sun rises, as you make your decisions." isInteractive />
   })
 
   // One hook per command, each with a literal matcher, so other mods' commands pass untouched.
