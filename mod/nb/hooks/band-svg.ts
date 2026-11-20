@@ -33,7 +33,7 @@ const NOISE = '#%&/\\<>=+*?!'
 export const xml = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /** Rough width of sans text at 13 px; wide enough that the bubble never cuts a word. */
-const sansWidth = (s: string): number => [...s].reduce((w, ch) => w + (/[A-ZĐ@MW]/.test(ch) ? 8.6 : /[ il.,:;'!|]/.test(ch) ? 3.6 : 7), 0)
+const sansWidth = (s: string): number => [...s].reduce((w, ch) => w + (/[A-ZĐ@MW]/.test(ch) ? 8.6 : /[ il.,:;'!|]/.test(ch) ? 3.6 : 7.5), 0)
 
 /** Breaks the sentence into at most two lines of about `max` px each. */
 export function wrap(text: string, max: number): string[] {

@@ -19,7 +19,7 @@ At first the agent helps you with each one. As you get good at a decision, that 
 2. **Open it with your agent.** In the Claude desktop app, choose **Code** and open the folder. Claude Code in a terminal and Codex also work: start them inside the folder.
 3. **Say what you want done**, in your own words and language. For example: *"Write an email inviting past clients back, 15% off if they book before 20/12."*
 
-The agent explains the idea in two sentences, then gets to work. Before it starts, it asks what "done" means to you. When it finishes, it checks the result against your answer, one line per point, and lets you accept or ask for a redo.
+The first time, the agent explains the idea in two sentences. Before each task, it asks what "done" means to you. When it finishes, it checks the result against your answer, one line per point, and lets you accept or ask for a redo.
 
 ## What you will see in the folder
 
@@ -90,7 +90,7 @@ Lúc đầu AI giúp bạn từng quyết định. Khi bạn đã quen, phần g
 2. **Mở nó bằng agent.** Trong app Claude trên máy tính, chọn **Code** rồi mở thư mục. Claude Code trong terminal và Codex cũng dùng được: mở chúng ngay trong thư mục này.
 3. **Nói việc bạn cần**, bằng lời và ngôn ngữ của bạn. Ví dụ: *"Viết giúp mình email mời khách cũ chụp ảnh Tết, giảm 15% nếu đặt trước 20/12."*
 
-AI giới thiệu ngắn hai câu rồi bắt tay vào làm. Trước khi làm, nó hỏi với bạn thế nào là xong. Làm xong, nó đối chiếu kết quả với câu trả lời đó, mỗi tiêu chí một dòng, rồi để bạn nhận hoặc yêu cầu làm lại.
+Lần đầu, AI giới thiệu ngắn trong hai câu. Trước mỗi việc, nó hỏi bạn thế nào là xong. Làm xong, nó đối chiếu kết quả với câu trả lời đó, mỗi tiêu chí một dòng, rồi để bạn nhận hoặc yêu cầu làm lại.
 
 ### Trong thư mục có gì
 
@@ -119,7 +119,7 @@ Không có nó, `AGENTS.md` vẫn đủ dùng. Tiện ích này (một "mod" c�
 
 - **The Colleague** `[•_•]`, một gương mặt nhỏ phía trên ô nhập, cho biết Claude đang làm gì và nói một câu ngắn sau mỗi lượt.
 - **Bốn quyết định của việc đang làm** ngay dưới gương mặt: cái nào đã chốt, cái nào đến lượt bạn.
-- **Đồng hồ context dịu mắt**, để bạn biết lúc nào nên mở phiên mới.
+- **Đồng hồ ngữ cảnh (context) dịu mắt**, để bạn biết lúc nào nên mở phiên mới.
 - **Mặt hồ ASCII nhiều màu phía sau khung chat.** Mặt trời lên dần theo số quyết định bạn đã chốt.
 - **`/grill-me`, `/challenge-me` và `/teach-me`** là skill thật, câu hỏi hiện thành lựa chọn để bấm.
 - **Dừng một lần trước khi ghi file đầu tiên**, nếu bạn chưa nói thế nào là xong. Chỉ hỏi một lần.
