@@ -1,0 +1,6 @@
+{
+  "name": "nb-spike",
+  "version": "0.1.0",
+  "description": "Spike kiểm tra khả thi mod problem2outcome trên Claude Desktop: cắt dòng <nb>, hoạt ảnh và nền, giữ tool call để hỏi, lưu câu đã dịch.",
+  "types": "./types/index.d.ts"
+}
