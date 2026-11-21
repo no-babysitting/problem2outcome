@@ -18,7 +18,7 @@ import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '
 
 import { bandSVG, bandText } from './band-svg.js'
 import { DECISION_WORDS, nbInstruction, presetLine, STATE_WORDS, strip, UI } from './colleague.js'
-import { languageOf, parseDecisions, progressOf } from './decisions.js'
+import { languageOf, parseDecisions, shellWriteTarget, progressOf } from './decisions.js'
 import { makeColors } from './make-colors.js'
 import { asciiSceneSVG } from './scene.js'
 
@@ -39,6 +39,7 @@ const SCENE = 'nb-dawn'
 const STALE_MS = 15000
 const LEVELS: readonly Level[] = ['quiet', 'normal', 'chatty']
 const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+
 
 const COMMANDS = [
   { name: 'nb', description: 'NB: where your task stands, and the mod settings' },
@@ -302,7 +303,7 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
     lines.push(`${vi ? 'Việc' : 'Task'}: ${task.name}`)
     for (let i = 0; i < 4; i++) {
       if (task.applies[i]) {
-        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? '✓' : task.next === i + 1 ? (vi ? '▍ lượt bạn' : '▍ your turn') : '·'}`)
+        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? '✓' : task.skipped[i] ? (vi ? '– bỏ qua' : '– skipped') : task.next === i + 1 ? (vi ? '▍ lượt bạn' : '▍ your turn') : '·'}`)
       }
     }
   }
@@ -354,6 +355,11 @@ export const register: Register = on => {
     await update($, stateAtom, () => 'thinking' as ColleagueState)
     await say($, '')
 
+    // At "quiet" the bubble shows nothing, so Claude is not asked for a line nobody would see (P3, C14).
+    if ((await read($, levelAtom)) === 'quiet') {
+      return next(e)
+    }
+
     return next({ ...e, context: [...(e.context ?? []), nbInstruction(await read($, langAtom), await read($, taskAtom))] })
   }).catch(($, e, next) => next(e))
 
@@ -368,13 +374,15 @@ export const register: Register = on => {
     }
 
     // M4: ask once what "done" means before the first write, only in this workspace and only when the task has none.
-    if (WRITES.has(e.tool) && !(await read($, askedAtom))) {
-      const path = String((e as { file_path?: string }).file_path ?? '')
+    const bashTarget = e.tool === 'Bash' ? shellWriteTarget(String((e as { command?: string }).command ?? '')) : null
+
+    if ((WRITES.has(e.tool) || bashTarget !== null) && !(await read($, askedAtom))) {
+      const path = bashTarget ?? String((e as { file_path?: string }).file_path ?? '')
       const task = await read($, taskAtom)
       const isOwnFile = /(^|[\\/])(decisions|me)\.md$/.test(path)
       const inWorkspace = await $.fs.exists('AGENTS.md').catch(() => false)
 
-      if (!isOwnFile && inWorkspace && (task === null || !task.made[1])) {
+      if (!isOwnFile && inWorkspace && (task === null || (!task.made[1] && !task.skipped[1]))) {
         await update($, askedAtom, () => true)
         const ui = UI[await read($, langAtom)]
 

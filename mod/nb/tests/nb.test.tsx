@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { bandSVG } from '../hooks/band-svg.js'
 import { presetLine, strip } from '../hooks/colleague.js'
-import { languageOf, parseDecisions, progressOf } from '../hooks/decisions.js'
+import { languageOf, parseDecisions, progressOf, shellWriteTarget } from '../hooks/decisions.js'
 import { asciiSceneSVG } from '../hooks/scene.js'
 
 // ---------- fixtures ----------
@@ -14,13 +14,16 @@ Date: YYYY-MM-DD · Size: small | larger
 
 ## 1. Real problem
 <!-- Larger tasks only. -->
+Confirmed: no
 
 ## 2. Done means
 <!-- Checkable criteria. -->
+Confirmed: no
 - [ ]
 
 ## 3. Delegate / keep
 <!-- Larger tasks only. -->
+Confirmed: no
 
 ## 4. Result
 <!-- One line per criterion. -->
@@ -30,12 +33,12 @@ Date: YYYY-MM-DD · Size: small | larger
 
 const LARGER_TWO_MADE = TEMPLATE.replace('<short name>', 'Launch newsletter')
   .replace('small | larger', 'larger')
-  .replace('<!-- Larger tasks only. -->\n', '<!-- Larger tasks only. -->\nReaders churn because issues are irregular.\n')
-  .replace('- [ ]\n', '- [ ] One issue drafted for 12 Dec\n- [ ] Under 400 words\n')
+  .replace('<!-- Larger tasks only. -->\nConfirmed: no\n', '<!-- Larger tasks only. -->\nConfirmed: yes\nReaders churn because issues are irregular.\n')
+  .replace('Confirmed: no\n- [ ]\n', 'Confirmed: yes\n- [ ] One issue drafted for 12 Dec\n- [ ] Under 400 words\n')
 
 const SMALL_ACCEPTED = TEMPLATE.replace('<short name>', 'Fix invoice table')
   .replace('small | larger', 'small')
-  .replace('- [ ]\n', '- [x] Totals match the sheet\n')
+  .replace('Confirmed: no\n- [ ]\n', 'Confirmed: yes\n- [x] Totals match the sheet\n')
   .replace('accepted on first try | redo (why)', 'accepted on first try')
 
 type Files = Record<string, { text: string; mtimeMs: number }>
@@ -120,6 +123,32 @@ test('decisions: a small task only has decisions 2 and 4; accepted is all done',
   expect(d.accepted).toBe(true)
   expect(d.next).toBe(null)
   expect(progressOf(d)).toBe(1)
+})
+
+test('decisions: words in a section are not a decision; only Confirmed: yes is (review F-L3-01)', () => {
+  const larger = TEMPLATE.replace('small | larger', 'larger')
+
+  for (const filler of ['- [ ] (chưa đặt)', '- [ ] (chờ bạn)', '- [ ] Under 150 words (draft, not confirmed yet)']) {
+    const d = parseDecisions(larger.replace('Confirmed: no\n- [ ]\n', `Confirmed: no\n${filler}\n`))
+
+    expect(d.made[1]).toBe(false)
+    expect(d.next).toBe(1)
+  }
+  expect(parseDecisions(larger.replace(/Confirmed: no\n- \[ \]\n/, 'Confirmed: yes\n- [ ] Under 150 words\n')).made[1]).toBe(true)
+
+  const skipped = parseDecisions(larger.replace('Confirmed: no\n- [ ]\n', 'Confirmed: skipped\n- [ ]\n').replace(/## 1\. Real problem\n<!-- Larger tasks only. -->\nConfirmed: no/, '## 1. Real problem\n<!-- Larger tasks only. -->\nConfirmed: yes'))
+
+  expect(skipped.made[1]).toBe(false)
+  expect(skipped.skipped[1]).toBe(true)
+  expect(skipped.next).toBe(3)
+})
+
+test('shell writes are seen; reads and /dev/null are not', () => {
+  expect(shellWriteTarget("cat > tasks/x/post.md <<'EOF'")).toBe('tasks/x/post.md')
+  expect(shellWriteTarget('echo hi | tee -a notes.txt')).toBe('notes.txt')
+  expect(shellWriteTarget('ls tasks 2>/dev/null')).toBe(null)
+  expect(shellWriteTarget('grep -c x a.md 2>&1')).toBe(null)
+  expect(shellWriteTarget('wc -w post.md')).toBe(null)
 })
 
 test('me.md: the language line', () => {
@@ -300,7 +329,13 @@ test('/mascot quiet is kept for the next session; other mods commands pass untou
 
   workspace(on, {})
   let other = ''
+  let context: readonly string[] | undefined
 
+  on('prompt.submit', (_, e) => {
+    context = e.context
+
+    return { text: e.text, context: e.context } as never
+  })
   on('command.run', (_, e) => {
     other = e.command
 
@@ -312,6 +347,30 @@ test('/mascot quiet is kept for the next session; other mods commands pass untou
   expect(store.get('nb.level')).toBe('quiet')
   expect(other).toBe('matrix')
   expect(result.text).toBe('theirs')
+
+})
+
+test('a draft in "done means" that the user has not confirmed still gets the one question (review F-L3-01)', async ($, on) => {
+  const draft = TEMPLATE.replace('small | larger', 'small').replace('Confirmed: no\n- [ ]\n', 'Confirmed: no\n- [ ] (chưa đặt)\n')
+
+  engine(on)
+  workspace(on, { 'AGENTS.md': { text: '#', mtimeMs: 1 }, 'tasks/2026-11-20-x/decisions.md': { text: draft, mtimeMs: 2 } })
+  let asked = 0
+
+  on('tool.call', (_, e) => {
+    if (e.tool === 'AskUserQuestion') {
+      asked += 1
+      const q = (e as { questions: { question: string }[] }).questions[0]?.question ?? ''
+
+      return { result: { questions: [], answers: { [q]: 'Criteria are clear, go on' } } } as never
+    }
+
+    return { result: {} }
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  await $.tool.call({ tool: 'Bash', command: "cat > tasks/2026-11-20-x/post.md <<'EOF'\nhi\nEOF" } as never)
+
+  expect(asked).toBe(1)
 })
 
 test('/nb tells where the task stands without a model call', async ($, on) => {

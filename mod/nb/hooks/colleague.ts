@@ -141,7 +141,7 @@ export function nbInstruction(lang: Lang, d: TaskDecisions | null): string {
   const task =
     d === null
       ? 'No task folder yet.'
-      : `Current task: "${d.name}" (${d.size}). Decisions made: ${d.made
+      : `Current task: "${d.name.replace(/[\u0000-\u001f\u007f"]/g, ' ').slice(0, 80)}" (${d.size}). Decisions made: ${d.made
           .map((m, i) => (d.applies[i] ? `${i + 1}=${m ? 'yes' : 'no'}` : null))
           .filter(Boolean)
           .join(', ')}.`

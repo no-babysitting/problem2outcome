@@ -7,8 +7,10 @@ export type TaskDecisions = {
   /** The task's short name from `# Task: …`, or the folder name. */
   name: string
   size: Size
-  /** Decisions 1 to 4, made or not. */
+  /** Decisions 1 to 4, made or not: `Confirmed: yes` for 1 to 3, the user's accept or redo for 4. */
   made: [boolean, boolean, boolean, boolean]
+  /** The user asked to skip this pause (`Confirmed: skipped`). */
+  skipped: [boolean, boolean, boolean, boolean]
   /** Which decisions apply: small tasks have only 2 and 4. */
   applies: [boolean, boolean, boolean, boolean]
   /** Decision 4 says accepted. */

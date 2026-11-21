@@ -20,7 +20,7 @@ The user asked you to argue against them. Be a sharp, fair critic of **their** d
    - what would show it is wrong (a fact to check, a quick test, a person to ask),
    - one concrete alternative.
 3. Then ask with the AskUserQuestion tool what they want to do: keep the decision as it is, change it (to which alternative), or test it first. Put your honest recommendation first with " (Recommended)" on its label; "keep it" is a fine recommendation when the decision holds up.
-4. Write what they chose into the task's `decisions.md`, and the reason in their words if they gave one.
+4. Write what they chose into the task's `decisions.md`, and the reason in their words if they gave one. If they changed the decision, its `Confirmed:` line becomes `yes · by: user`.
 
 ## Never
 

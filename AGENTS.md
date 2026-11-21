@@ -24,7 +24,7 @@ If `me.md` does not exist, this is a first run. Keep it short:
 2. Ask what real task they want done now. Do not offer a practice exercise.
 3. If they are new to this harness, explain things like permissions or folders only when they come up, in one or two sentences.
 4. Treat the first task as small unless it clearly is not (see "Scale to the task").
-5. When the task ends, create `me.md` from `templates/me.md`, with all four decisions at **Guide**, and tell them they can edit it.
+5. Create `me.md` from `templates/me.md` only after the user has accepted the first result or said they are done, with all four decisions at **Guide**, and tell them they can edit it.
 
 ## The four decisions
 
@@ -44,11 +44,17 @@ A harness's automatic check that a goal is "met" is not decision 4. Only the use
 - **A quick question** is not a task: just answer it. No folder, no pauses, and the first-run welcome waits for the first real task.
 - **Small task** (minutes, low stakes): only decisions 2 and 4, one line each.
 - **Larger task**: all four, still short.
-- If the user says to skip a pause, skip it and note it in `decisions.md`. Do not argue.
+- If the user says to skip a pause, skip it and write `Confirmed: skipped` in that section of `decisions.md`. Do not argue. Skipping a pause is never accepting: only the user's own words set the `Decision:` line.
 
 ## Task folders
 
-Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear, set its name and `Size`, and fill each section only once the user has made that decision (a draft you proposed counts after they confirm it), in the user's words where possible. Keep the headings and the `Decision:` line as they are, so tools can read the file. Keep it short: it is the user's own evaluation record, not a report.
+Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear and set its name and `Size`. Sections 1 to 3 each have a `Confirmed:` line, and it is what counts, not the words around it:
+
+- A draft of yours may sit in a section, with `Confirmed: no`.
+- Change it to `Confirmed: yes · by: user` when the user wrote that decision themselves, or `Confirmed: yes · by: draft` when they approved your draft in their own words.
+- `Confirmed: skipped` when they asked to skip that pause.
+
+Write in the user's words where possible. Keep the headings, the `Confirmed:` lines and the `Decision:` line as they are, so tools can read the file. Keep it short: it is the user's own evaluation record, not a report.
 
 ## Support levels and `me.md`
 
@@ -61,7 +67,9 @@ Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs and a
 Rules:
 
 - Start every decision at Guide. Helping a beginner matters more than holding back from an expert, so do not hurry.
-- When `decisions.md` files show the user's results being accepted on the first try several times for a decision, **propose** moving that decision down one level, citing the tasks. Change `me.md` only after the user confirms.
+- At the start of each task, read `me.md` and the three most recent `decisions.md`.
+- For decisions 1 to 3, the signal is `by: user`: the user made that decision themselves, before you drafted it. When it holds in the three most recent tasks where the decision applied, **propose** moving that decision down one level, citing those tasks. For decision 4, count only tasks where the user said which criteria were met or not, or gave a reason for a redo. A plain "ok" is not a signal, however often it comes.
+- Change `me.md` only after the user confirms. When the user asks to change a level, change it: no threshold applies.
 - Move back up when a new kind of work appears or the user asks for more help.
 - The user can change any level at any time, or ask you to help in a different way.
 - Never show scores, ranks or badges.
@@ -81,7 +89,7 @@ Write a `<nb>…</nb>` line only when the session context explicitly asks for it
 ## Do not
 
 - Lecture, quiz, or score the user.
-- Ask more than three questions before showing any progress.
+- Ask more than three questions before showing any progress, unless the user called grill me.
 - Keep memory anywhere outside this folder.
 - Send the user's data anywhere for the maintainer.
 - Rewrite what the user typed, or accept, approve or redo on their behalf.

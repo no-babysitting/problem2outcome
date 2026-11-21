@@ -186,6 +186,7 @@ export function bandSVG(m: BandModel): string {
       const isNext = d.next === i + 1
       const made = d.made[i]
       const cls = made ? 'done' : isNext ? 'next' : 'later'
+      const skipped = d.skipped[i]
       const gap = spans.length === 0 ? '' : ' dx="16"'
 
       spans.push(`<tspan${gap} class="${cls}">${xml(`${CIRCLED[i]} ${words[i]}`)}</tspan>`)
@@ -194,6 +195,9 @@ export function bandSVG(m: BandModel): string {
         const flash = i === 3 && d.accepted && m.state === 'verified' ? ' flash' : ''
 
         spans.push(`<tspan dx="5" class="ok${flash}">${i === 3 && d.redo ? '↺' : '✓'}</tspan>`)
+      } else if (skipped) {
+        // A pause the user chose to skip: not made, not waiting either.
+        spans.push(`<tspan dx="5" class="quiet">–</tspan>`)
       } else if (isNext) {
         spans.push(`<tspan dx="3" class="cur">▍</tspan>`)
       }
@@ -256,7 +260,7 @@ export function bandText(m: BandModel): { face: string; color: string; line: str
       ? UI[m.lang].noTask
       : [0, 1, 2, 3]
           .filter(i => d.applies[i])
-          .map(i => `${CIRCLED[i]} ${words[i]}${d.made[i] ? ' ✓' : d.next === i + 1 ? ' ▍' : ''}`)
+          .map(i => `${CIRCLED[i]} ${words[i]}${d.made[i] ? ' ✓' : d.skipped[i] ? ' –' : d.next === i + 1 ? ' ▍' : ''}`)
           .join('   ')
   const ctx = m.contextPercent
 

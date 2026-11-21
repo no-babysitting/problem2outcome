@@ -14,7 +14,9 @@ const TEMPLATE = (size: string, made: number, accepted: boolean): string => {
   const s3 = larger && made >= 3 ? 'Claude viết nháp; tôi chọn ảnh và gửi.' : ''
   const s4 = accepted ? 'accepted on first try' : 'accepted on first try | redo (why)'
 
-  return `# Task: Email mời chụp ảnh Tết\n\nDate: 2026-11-20 · Size: ${size}\n\n## 1. Real problem\n${s1}\n\n## 2. Done means\n${s2}\n\n## 3. Delegate / keep\n${s3}\n\n## 4. Result\n- Decision: ${s4}\n`
+  const ok = (yes: boolean): string => `Confirmed: ${yes ? 'yes' : 'no'}`
+
+  return `# Task: Email mời chụp ảnh Tết\n\nDate: 2026-11-20 · Size: ${size}\n\n## 1. Real problem\n${ok(s1 !== '')}\n${s1}\n\n## 2. Done means\n${ok(s2 !== '- [ ] ')}\n${s2}\n\n## 3. Delegate / keep\n${ok(s3 !== '')}\n${s3}\n\n## 4. Result\n- Decision: ${s4}\n`
 }
 
 const $ = (id: string): HTMLInputElement => document.getElementById(id) as HTMLInputElement

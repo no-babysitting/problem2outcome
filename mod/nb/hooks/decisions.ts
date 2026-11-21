@@ -1,7 +1,9 @@
 // Reads a task's decisions.md (the workspace template) into what the band shows. Pure: no $, no I/O.
 //
-// A decision counts as made when its section holds the user's words: anything besides HTML comments,
-// empty checkboxes and the template's own placeholder text.
+// Decisions 1 to 3 count as made only when their section says `Confirmed: yes`, which the agent writes after the
+// user confirms in their own words (AGENTS.md). Words in a section prove nothing: a draft, or a placeholder such as
+// "(chưa đặt)", is not a decision. `Confirmed: skipped` is a pause the user asked to skip. Decision 4 is the
+// `Decision:` line, which only the user's accept or redo sets.
 
 import type { Size, TaskDecisions } from '../types'
 
@@ -9,13 +11,11 @@ const PLACEHOLDER = /^(<short name>|accepted on first try \| redo \(why\)|small 
 
 const stripComments = (text: string): string => text.replace(/<!--[\s\S]*?-->/g, '')
 
-const meaningful = (line: string): boolean => {
-  const t = line
-    .trim()
-    .replace(/^[-*]\s*(\[[ xX]\]\s*)?/, '')
-    .trim()
+/** The section's `Confirmed:` value: yes, skipped, or no (also when the line is missing). */
+const confirmed = (section: string): 'yes' | 'skipped' | 'no' => {
+  const v = /^\s*(?:[-*]\s*)?Confirmed:[ \t]*(\w+)/im.exec(section)?.[1]?.toLowerCase() ?? ''
 
-  return t !== '' && !PLACEHOLDER.test(t)
+  return v === 'yes' ? 'yes' : v === 'skipped' || v === 'skip' ? 'skipped' : 'no'
 }
 
 /** Splits the file into the body of each `## N.` section. */
@@ -61,16 +61,13 @@ export function parseDecisions(text: string, folder = ''): TaskDecisions {
   const accepted = decision.startsWith('accept')
   const redo = decision.startsWith('redo')
 
-  const made: [boolean, boolean, boolean, boolean] = [
-    body[0].split('\n').some(meaningful),
-    body[1].split('\n').some(meaningful),
-    body[2].split('\n').some(meaningful),
-    accepted || redo,
-  ]
+  const state = [confirmed(body[0]), confirmed(body[1]), confirmed(body[2])]
+  const made: [boolean, boolean, boolean, boolean] = [state[0] === 'yes', state[1] === 'yes', state[2] === 'yes', accepted || redo]
+  const skipped: [boolean, boolean, boolean, boolean] = [state[0] === 'skipped', state[1] === 'skipped', state[2] === 'skipped', false]
   const applies: [boolean, boolean, boolean, boolean] = size === 'small' ? [false, true, false, true] : [true, true, true, true]
-  const idx = [0, 1, 2, 3].find(i => applies[i] && !made[i])
+  const idx = [0, 1, 2, 3].find(i => applies[i] && !made[i] && !skipped[i])
 
-  return { name, size, made, applies, accepted, redo, next: idx === undefined ? null : ((idx + 1) as 1 | 2 | 3 | 4) }
+  return { name, size, made, skipped, applies, accepted, redo, next: idx === undefined ? null : ((idx + 1) as 1 | 2 | 3 | 4) }
 }
 
 /** Share of the decisions that apply which are made, 0..1. Drives how high the sun stands. */
@@ -93,4 +90,16 @@ export function languageOf(meText: string): 'en' | 'vi' | null {
   }
 
   return /^(vi|viet|tiếng việt|tieng viet)/.test(v) ? 'vi' : 'en'
+}
+
+/**
+ * The file a shell command writes with `>`, `>>` or `tee`, or null. A rough reading on purpose: it only decides
+ * whether to ask "what counts as done?" once, so a miss costs nothing and the agreement in AGENTS.md still holds.
+ */
+export function shellWriteTarget(command: string): string | null {
+  const redirect = /(?:^|[^0-9&>])>{1,2}\s*(['"]?)([^\s'"|&;<>]+)\1/.exec(command)
+  const tee = /\btee\s+(?:-a\s+)?(['"]?)([^\s'"|&;<>]+)\1/.exec(command)
+  const target = redirect?.[2] ?? tee?.[2] ?? null
+
+  return target === null || target.startsWith('/dev/') ? null : target
 }
