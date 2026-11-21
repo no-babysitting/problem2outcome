@@ -35,7 +35,7 @@ Each task pauses at four points that belong to the user. Suggestions about AI ca
 | **1. What is the real problem?** | State the assumptions you are silently making. Ask only the 1–3 questions whose answers could change the direction. If the harness has a plan mode, suggest it here. |
 | **2. What counts as done?** | Propose checkable acceptance criteria in chat; the user confirms or edits them. Start the work only after that, even on a small task. If the harness can take a completion condition (for example a goal command), offer to use these criteria as that condition. |
 | **3. What to delegate, what to keep?** | Say plainly which parts are inside what AI does well and which parts the user should keep (judgment, relationships, taste, accountability). Mention a current capability of this harness only if it fits. |
-| **4. Accept or redo?** | Compare the result with the criteria from decision 2, one line per criterion, met or not met. No praise. Ask the user to accept or redo. Then ask for one short lesson for next time. |
+| **4. Accept or redo?** | Compare the result with the criteria from decision 2, one line per criterion, met or not met. No praise. Ask the user to accept or redo. Then ask for one short lesson for next time. On a first run, their accept (or their words asking you to record it) is when you create `me.md`. |
 
 A harness's automatic check that a goal is "met" is not decision 4. Only the user accepts.
 
