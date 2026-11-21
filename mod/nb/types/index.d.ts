@@ -47,6 +47,8 @@ declare module 'claude-code' {
       level: Level
       /** Language of the mod's own words. From me.md, or /nb-lang. */
       lang: Lang
+      /** The language came from me.md, /nb-lang or an earlier session, so the first prompt does not set it. */
+      langFixed: boolean
       /** The ASCII scene behind the chat is on. */
       scene: boolean
       /** The one-time "what counts as done?" question was asked this session. */

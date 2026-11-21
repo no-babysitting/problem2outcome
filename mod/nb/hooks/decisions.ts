@@ -115,3 +115,14 @@ export function shellWriteTarget(command: string): string | null {
 
   return target === '' || target.startsWith('/dev/') ? null : target
 }
+
+/** Letters few languages but Vietnamese use. */
+const VI_LETTERS = /[ăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/u
+const ACCENTED = /[à-ỹ]/gu
+
+/** A prompt is Vietnamese when it has a letter only Vietnamese uses and at least three accented letters (a lone name like "Nguyễn" is not). */
+export function languageOfText(text: string): 'vi' | null {
+  const lower = text.toLowerCase()
+
+  return VI_LETTERS.test(lower) && (lower.match(ACCENTED)?.length ?? 0) >= 3 ? 'vi' : null
+}

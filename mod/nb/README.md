@@ -31,7 +31,7 @@ These answer at once, without asking the model:
 
 - `/nb`: where your task stands, and what each skill is for.
 - `/mascot quiet | normal | chatty`: how often The Colleague speaks. At `quiet` it says nothing and Claude is not asked for its line.
-- `/nb-lang en | vi`: the add-on's language. It also follows the `Language:` line in your `me.md`.
+- `/nb-lang en | vi`: the add-on's language. It also follows the `Language:` line in your `me.md`; before that exists, it follows your first message of the session.
 - `/nb-scene on | off`: the lake behind the chat.
 
 ## Good to know

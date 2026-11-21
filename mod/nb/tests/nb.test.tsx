@@ -2,9 +2,9 @@
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
-import { bandSVG } from '../hooks/band-svg.js'
-import { presetLine, strip } from '../hooks/colleague.js'
-import { languageOf, parseDecisions, progressOf, shellWriteTarget } from '../hooks/decisions.js'
+import { bandSVG, wrap } from '../hooks/band-svg.js'
+import { presetLine, strip, WELCOME_BOTH } from '../hooks/colleague.js'
+import { languageOf, languageOfText, parseDecisions, progressOf, shellWriteTarget } from '../hooks/decisions.js'
 import { asciiSceneSVG } from '../hooks/scene.js'
 
 // ---------- fixtures ----------
@@ -302,6 +302,44 @@ test('prompt.submit adds the hidden <nb> request and keeps the user text', async
 
   expect(text).toBe('Help me plan the launch')
   expect(context?.some(c => c.includes('<nb>'))).toBe(true)
+})
+
+test('first run: a Vietnamese first prompt makes the band speak Vietnamese; later prompts do not flip it', async ($, on) => {
+  engine(on)
+  workspace(on, {})
+  const contexts: (readonly string[] | undefined)[] = []
+
+  on('prompt.submit', (_, e) => {
+    contexts.push(e.context)
+
+    return { text: e.text, context: e.context } as never
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  await $.prompt.submit({ text: 'Viết giúp mình email mời khách cũ chụp ảnh Tết' } as never)
+  await $.prompt.submit({ text: 'ok, plain English now' } as never)
+
+  expect(contexts[0]?.some(c => c.includes('Vietnamese'))).toBe(true)
+  expect(contexts[1]?.some(c => c.includes('Vietnamese'))).toBe(true)
+})
+
+test('first run before any prompt: the welcome speaks both languages and fits the bubble', async ($, on) => {
+  engine(on)
+  workspace(on, {})
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' } as never)
+
+  expect((await ui.find({ type: 'Text', text: /Bạn quyết/ }))?.text).toBe(WELCOME_BOTH)
+  await ui.unmount()
+  expect(wrap(WELCOME_BOTH, 380).join(' ')).toBe(WELCOME_BOTH)
+})
+
+test('languageOfText: Vietnamese letters, not a single accent', () => {
+  expect(languageOfText('Viết giúp mình email')).toBe('vi')
+  expect(languageOfText('Write an email to past clients')).toBe(null)
+  expect(languageOfText('Café menu for the launch')).toBe(null)
+  expect(languageOfText('Send the contract to Nguyễn Văn An')).toBe(null)
+  expect(languageOfText('chụp ảnh gia đình')).toBe('vi')
 })
 
 test('before the first write with no criteria, ask once; "not yet" stops the write', async ($, on) => {

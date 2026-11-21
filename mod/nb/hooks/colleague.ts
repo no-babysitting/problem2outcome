@@ -108,6 +108,9 @@ export function presetLine(lang: Lang, d: TaskDecisions | null, isFirstRun: bool
   return d.next === null ? L.allDone : L[`next${d.next}` as LineKey]
 }
 
+/** The first-run welcome before the language is known (no me.md, no /nb-lang, no prompt yet): both languages in one line. */
+export const WELCOME_BOTH = 'You decide, I do the work. What needs doing? · Bạn quyết, mình làm. Việc gì đây?'
+
 /** Short UI words for the band and the hold question. */
 type UiKey = 'context' | 'limit' | 'noTask' | 'holdQuestion' | 'holdHeader' | 'holdReady' | 'holdNotYet' | 'holdNever'
 

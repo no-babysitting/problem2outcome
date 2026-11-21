@@ -17,8 +17,8 @@ import type { EngineInterface, Register, ThemeSetArgs } from 'claude-code'
 import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '../types'
 
 import { bandSVG, bandText } from './band-svg.js'
-import { DECISION_WORDS, nbInstruction, presetLine, STATE_WORDS, strip, UI } from './colleague.js'
-import { languageOf, parseDecisions, shellWriteTarget, progressOf } from './decisions.js'
+import { DECISION_WORDS, nbInstruction, presetLine, STATE_WORDS, strip, UI, WELCOME_BOTH } from './colleague.js'
+import { languageOf, languageOfText, parseDecisions, shellWriteTarget, progressOf } from './decisions.js'
 import { makeColors } from './make-colors.js'
 import { asciiSceneSVG } from './scene.js'
 
@@ -33,6 +33,7 @@ const firstRunAtom = atom({ plugin: 'nb', key: 'isFirstRun' } as const, false)
 const levelAtom = atom({ plugin: 'nb', key: 'level' } as const, 'normal' as Level)
 const langAtom = atom({ plugin: 'nb', key: 'lang' } as const, 'en' as Lang)
 const sceneAtom = atom({ plugin: 'nb', key: 'scene' } as const, true)
+const langFixedAtom = atom({ plugin: 'nb', key: 'langFixed' } as const, false)
 const askedAtom = atom({ plugin: 'nb', key: 'asked' } as const, false)
 
 const SCENE = 'nb-dawn'
@@ -179,6 +180,7 @@ async function readWorkspace($: Dollar): Promise<void> {
 
     if (lang !== null && (await $.store.get('nb.lang')) === undefined) {
       await update($, langAtom, () => lang)
+      await update($, langFixedAtom, () => true)
     }
   }
   await update($, firstRunAtom, () => !hasMe)
@@ -229,6 +231,7 @@ async function loadSettings($: Dollar): Promise<void> {
   }
   if (lang === 'en' || lang === 'vi') {
     await update($, langAtom, () => lang)
+    await update($, langFixedAtom, () => true)
   }
   if (typeof scene === 'boolean') {
     await update($, sceneAtom, () => scene)
@@ -270,9 +273,10 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
 
   if (name === 'nb-lang') {
     if (arg !== 'en' && arg !== 'vi') {
-      return { text: vi ? 'Dùng /nb-lang en hoặc /nb-lang vi.' : 'Use /nb-lang en or /nb-lang vi.' }
+      return { text: vi ? 'NB đang nói tiếng Việt. Đổi bằng /nb-lang en hoặc /nb-lang vi.' : 'NB speaks English now. Change it with /nb-lang en or /nb-lang vi.' }
     }
     await update($, langAtom, () => arg)
+    await update($, langFixedAtom, () => true)
     await $.store.set('nb.lang', arg)
     await say($, presetLine(arg, await read($, taskAtom), await read($, firstRunAtom)))
 
@@ -281,7 +285,9 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
 
   if (name === 'nb-scene') {
     if (arg !== 'on' && arg !== 'off') {
-      return { text: vi ? 'Dùng /nb-scene on hoặc off.' : 'Use /nb-scene on or off.' }
+      const on = await read($, sceneAtom)
+
+      return { text: vi ? `Cảnh nền đang ${on ? 'bật' : 'tắt'}. Dùng /nb-scene on hoặc off.` : `Scene is ${on ? 'on' : 'off'}. Use /nb-scene on or off.` }
     }
     await update($, sceneAtom, () => arg === 'on')
     await $.store.set('nb.scene', arg === 'on')
@@ -335,7 +341,11 @@ export const register: Register = on => {
       .catch(() => undefined)
     await applyLook($)
     if ((await read($, levelAtom)) !== 'quiet') {
-      await say($, presetLine(await read($, langAtom), await read($, taskAtom), await read($, firstRunAtom)))
+      const task = await read($, taskAtom)
+      const isFirstRun = await read($, firstRunAtom)
+      const langKnown = await read($, langFixedAtom)
+
+      await say($, isFirstRun && task === null && !langKnown ? WELCOME_BOTH : presetLine(await read($, langAtom), task, isFirstRun))
     }
 
     return next(e)
@@ -354,6 +364,14 @@ export const register: Register = on => {
     }
     await update($, stateAtom, () => 'thinking' as ColleagueState)
     await say($, '')
+
+    // No me.md language and no /nb-lang yet: the band speaks the language of the first prompt (vi or en), for this session only.
+    if (!(await read($, langFixedAtom))) {
+      await update($, langFixedAtom, () => true)
+      if (languageOfText(e.text ?? '') === 'vi') {
+        await update($, langAtom, () => 'vi' as Lang)
+      }
+    }
 
     // At "quiet" the bubble shows nothing, so Claude is not asked for a line nobody would see (P3, C14).
     if ((await read($, levelAtom)) === 'quiet') {
