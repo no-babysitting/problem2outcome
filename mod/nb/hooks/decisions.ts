@@ -97,9 +97,20 @@ export function languageOf(meText: string): 'en' | 'vi' | null {
  * whether to ask "what counts as done?" once, so a miss costs nothing and the agreement in AGENTS.md still holds.
  */
 export function shellWriteTarget(command: string): string | null {
-  const redirect = /(?:^|[^0-9&>])>{1,2}\s*(['"]?)([^\s'"|&;<>]+)\1/.exec(command)
-  const tee = /\btee\s+(?:-a\s+)?(['"]?)([^\s'"|&;<>]+)\1/.exec(command)
-  const target = redirect?.[2] ?? tee?.[2] ?? null
+  // Blank out quoted text first, so a ">" inside a string ("%h > %s", x => x + 1) is not taken for a redirect.
+  // The quotes stay, so a quoted target after a real ">" is still found in the original command.
+  const bare = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, q => q[0] + ' '.repeat(q.length - 2) + q[0])
+  const redirect = /(?:^|[^0-9&>=\-])>{1,2}\s*(['"]?)/.exec(bare)
+  const tee = /\btee\s+(?:-a\s+)?(['"]?)/.exec(bare)
+  const at = redirect !== null ? redirect.index + redirect[0].length : tee !== null ? tee.index + tee[0].length : -1
 
-  return target === null || target.startsWith('/dev/') ? null : target
+  if (at < 0) {
+    return null
+  }
+
+  const quote = (redirect ?? tee)?.[1] ?? ''
+  const rest = command.slice(at)
+  const target = (quote !== '' ? rest.slice(0, Math.max(0, rest.indexOf(quote))) : /^[^\s|&;<>]+/.exec(rest)?.[0]) ?? ''
+
+  return target === '' || target.startsWith('/dev/') ? null : target
 }

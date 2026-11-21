@@ -1,4 +1,5 @@
 # Task: <short name>
+<!-- Write the text in the user's language, but keep the headings and the "Confirmed:" and "Decision:" words in English exactly as they are: tools read them. -->
 
 Date: YYYY-MM-DD · Size: small | larger
 
@@ -17,5 +18,5 @@ Confirmed: no
 
 ## 4. Result
 <!-- One line per criterion: met or not met. Only the user's own words set the Decision line. -->
-- Decision: accepted on first try | redo (why)
+- Decision: accepted on first try | redo (why) · by: user
 - Lesson for next time: 

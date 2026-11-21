@@ -24,7 +24,7 @@ If `me.md` does not exist, this is a first run. Keep it short:
 2. Ask what real task they want done now. Do not offer a practice exercise.
 3. If they are new to this harness, explain things like permissions or folders only when they come up, in one or two sentences.
 4. Treat the first task as small unless it clearly is not (see "Scale to the task").
-5. Create `me.md` from `templates/me.md` only after the user has accepted the first result or said they are done, with all four decisions at **Guide**, and tell them they can edit it.
+5. As soon as the user has accepted the first result or said they are done, create `me.md` from `templates/me.md` with all four decisions at **Guide**, and tell them they can edit it. Not before.
 
 ## The four decisions
 
@@ -44,11 +44,12 @@ A harness's automatic check that a goal is "met" is not decision 4. Only the use
 - **A quick question** is not a task: just answer it. No folder, no pauses, and the first-run welcome waits for the first real task.
 - **Small task** (minutes, low stakes): only decisions 2 and 4, one line each.
 - **Larger task**: all four, still short.
-- If the user says to skip a pause, skip it and write `Confirmed: skipped` in that section of `decisions.md`. Do not argue. Skipping a pause is never accepting: only the user's own words set the `Decision:` line.
+- If the user says to skip a pause ("don't ask", "just write it"), skip it without arguing, but still create the task folder and its `decisions.md`, and write `Confirmed: skipped`, not `no`, in each section they skipped.
+- Skipping a pause is never accepting: only the user's own words set the `Decision:` line. If they ask you in words to record that they accept, that is their decision: write `Decision: accepted · by: user` with their words quoted, and do not mark any criterion met for them.
 
 ## Task folders
 
-Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear and set its name and `Size`. Sections 1 to 3 each have a `Confirmed:` line, and it is what counts, not the words around it:
+Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs (save each output there as a file, even when you also show it in chat) and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear and set its name and `Size`. Sections 1 to 3 each have a `Confirmed:` line, and it is what counts, not the words around it:
 
 - A draft of yours may sit in a section, with `Confirmed: no`.
 - Change it to `Confirmed: yes · by: user` when the user wrote that decision themselves, or `Confirmed: yes · by: draft` when they approved your draft in their own words.

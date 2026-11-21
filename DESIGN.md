@@ -90,6 +90,8 @@ Vòng lặp tạo ra hai dynamic chính:
 
 **Co theo cỡ việc:** việc nhỏ chỉ còn quyết định 2 và 4, mỗi quyết định một dòng. Quy tắc này chống lại trải nghiệm "nghi thức rườm rà".
 
+**Đã chốt (21/11), bỏ pause và nhờ ghi hộ:** bỏ một pause không bỏ thư mục việc; agent vẫn tạo `decisions.md` và ghi `Confirmed: skipped`. Bỏ pause không bao giờ là chấp nhận. Nhưng khi người dùng nói rõ bằng lời "ghi là mình đã chấp nhận", đó là quyết định của họ: agent ghi `Decision: accepted · by: user` kèm trích nguyên văn, và không ghi tiêu chí nào là đạt thay họ (finding F2-01, giữ hành vi này).
+
 **Chế độ người dùng chủ động gọi** (nháp, theo comment của người bảo trì 20/11). Ngoài vòng bốn quyết định, người dùng có thể tự gọi một chế độ khi muốn đi sâu hơn. Agent không bao giờ tự bật chúng (A1).
 
 | Chế độ | Agent làm gì | Gắn với |
@@ -144,7 +146,7 @@ Các chế độ được mô tả trong `AGENTS.md` và gọi bằng lời nói
 *Đã chốt phần lớn, chỉ có trên Desktop khi cài mod.* Phần này tạo ra hai dynamic:
 
 - **D4. Mascot phản ứng theo trạng thái:** một bạn đồng hành thường xuyên, nói vừa phải và không chen ngang (A3, A5).
-- **D5. Không gian làm việc có sự sống:** hình nền và hoạt ảnh đổi theo mức context, hạn mức và model, giúp người dùng cảm được tình trạng phiên mà không phải đọc số (A5, A4).
+- **D5. Không gian làm việc có sự sống:** hình nền đổi theo tiến độ bốn quyết định (mặt trời lên dần khi người dùng quyết), còn đồng hồ ngữ cảnh cho biết phiên đã đầy tới đâu, giúp người dùng cảm được tình trạng việc và phiên mà không phải đọc số (A5, A4).
 
 **Luật của mascot:**
 

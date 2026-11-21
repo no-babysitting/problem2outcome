@@ -149,6 +149,12 @@ test('shell writes are seen; reads and /dev/null are not', () => {
   expect(shellWriteTarget('ls tasks 2>/dev/null')).toBe(null)
   expect(shellWriteTarget('grep -c x a.md 2>&1')).toBe(null)
   expect(shellWriteTarget('wc -w post.md')).toBe(null)
+  // review F2-03: a ">" inside quotes or an arrow is not a redirect
+  expect(shellWriteTarget('node -e "const f = x => x+1"')).toBe(null)
+  expect(shellWriteTarget('git log --format="%h > %s"')).toBe(null)
+  expect(shellWriteTarget("awk '$1 > 3' data.csv")).toBe(null)
+  expect(shellWriteTarget('echo "a > b" > "out file.md"')).toBe('out file.md')
+  expect(shellWriteTarget('printf x >> log.txt')).toBe('log.txt')
 })
 
 test('me.md: the language line', () => {
