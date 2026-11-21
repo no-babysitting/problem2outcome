@@ -147,7 +147,7 @@ export const ME_MISSING =
 export function nbInstruction(lang: Lang, d: TaskDecisions | null): string {
   const task =
     d === null
-      ? 'No task folder yet.'
+      ? 'No task folder yet. If this message starts a task, create its folder and decisions.md as AGENTS.md says, even when the user asks to skip the questions.'
       : `Current task: "${d.name.replace(/[\u0000-\u001f\u007f"]/g, ' ').slice(0, 80)}" (${d.size}). Decisions made: ${d.made
           .map((m, i) => (d.applies[i] ? `${i + 1}=${m ? 'yes' : 'no'}` : null))
           .filter(Boolean)

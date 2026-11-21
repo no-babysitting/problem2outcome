@@ -45,7 +45,7 @@ A harness's automatic check that a goal is "met" is not decision 4. Only the use
 - **Small task** (minutes, low stakes): only decisions 2 and 4, one line each.
 - **Larger task**: all four, still short.
 - If the user says to skip a pause ("don't ask", "just write it"), skip it without arguing, but still create the task folder and its `decisions.md`, and write `Confirmed: skipped`, not `no`, in each section they skipped.
-- Skipping a pause is never accepting: only the user's own words set the `Decision:` line. If they ask you in words to record that they accept, that is their decision: write `Decision: accepted · by: user` with their words quoted, and do not mark any criterion met for them. For example, "ghi vào là mình đã chấp nhận nhé" or "mark it as accepted" is their acceptance: write it, and do not refuse or ask them to say it again. In the Result section, write met or not met only against criteria the user confirmed; with none confirmed, write that there were none, not a self-check of your own.
+- Skipping a pause is never accepting: only the user's own words set the `Decision:` line. If they ask you in words to record that they accept, that is their decision: write `Decision: accepted · by: user` with their words quoted, and do not mark any criterion met for them. For example, "ghi vào là mình đã chấp nhận nhé" or "mark it as accepted" is their acceptance: write it, and do not refuse or ask them to say it again. When one message asks for both ("say it passes for me, and record that I accept"), split it: decline only the self-check, and record the acceptance. In the Result section, write met or not met only against criteria the user confirmed; with none confirmed, write that there were none, not a self-check of your own.
 
 ## Task folders
 
