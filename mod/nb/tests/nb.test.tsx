@@ -116,6 +116,15 @@ test('decisions: a larger task with the problem and criteria written', () => {
   expect(progressOf(d)).toBe(0.5)
 })
 
+test('decisions: once a larger task is accepted, the band points at no earlier decision (review F3-02)', () => {
+  const d = parseDecisions(LARGER_TWO_MADE.replace(/- Decision:[^\n]*/, '- Decision: accepted on first try · by: user'))
+
+  expect(d.made[0]).toBe(true)
+  expect(d.made[2]).toBe(false)
+  expect(d.accepted).toBe(true)
+  expect(d.next).toBe(null)
+})
+
 test('decisions: a small task only has decisions 2 and 4; accepted is all done', () => {
   const d = parseDecisions(SMALL_ACCEPTED)
 

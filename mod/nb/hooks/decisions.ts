@@ -65,7 +65,8 @@ export function parseDecisions(text: string, folder = ''): TaskDecisions {
   const made: [boolean, boolean, boolean, boolean] = [state[0] === 'yes', state[1] === 'yes', state[2] === 'yes', accepted || redo]
   const skipped: [boolean, boolean, boolean, boolean] = [state[0] === 'skipped', state[1] === 'skipped', state[2] === 'skipped', false]
   const applies: [boolean, boolean, boolean, boolean] = size === 'small' ? [false, true, false, true] : [true, true, true, true]
-  const idx = [0, 1, 2, 3].find(i => applies[i] && !made[i] && !skipped[i])
+  // Once the user has accepted or asked for a redo, the task has no earlier turn left to point at (review F3-02).
+  const idx = made[3] ? undefined : [0, 1, 2, 3].find(i => applies[i] && !made[i] && !skipped[i])
 
   return { name, size, made, skipped, applies, accepted, redo, next: idx === undefined ? null : ((idx + 1) as 1 | 2 | 3 | 4) }
 }
