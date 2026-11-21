@@ -137,6 +137,10 @@ export const UI: Record<Lang, Record<UiKey, string>> = {
   },
 }
 
+/** Hidden note to the agent when an accepted task has no me.md yet (AGENTS.md First run 5). */
+export const ME_MISSING =
+  'The user has accepted this task and me.md does not exist yet. As AGENTS.md says under "First run", create me.md now from templates/me.md with all four decisions at Guide (set the Language line to the language the user writes in), and tell the user in one sentence that they can edit it.'
+
 // ---------- the <nb> line Claude may append to a reply ----------
 
 /** Hidden context added to each prompt while the mod is on (C9). Claude reads it; the user does not. */

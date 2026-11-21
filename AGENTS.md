@@ -69,7 +69,7 @@ Write in the user's words where possible. Keep the headings, the `Confirmed:` li
 Rules:
 
 - Start every decision at Guide. Helping a beginner matters more than holding back from an expert, so do not hurry.
-- At the start of each task, read `me.md` and the three most recent `decisions.md`.
+- At the start of each task, read `me.md` and the three most recent `decisions.md`. If `me.md` is missing but one of them already says `Decision: accepted`, create `me.md` first (First run, step 5); this is not a first run, so skip the welcome.
 - For decisions 1 to 3, the signal is `by: user`: the user made that decision themselves, before you drafted it. When it holds in the three most recent tasks where the decision applied, **propose** moving that decision down one level, citing those tasks. For decision 4, count only tasks where the user said which criteria were met or not, or gave a reason for a redo. A plain "ok" is not a signal, however often it comes.
 - Change `me.md` only after the user confirms. When the user asks to change a level, change it: no threshold applies.
 - Move back up when a new kind of work appears or the user asks for more help.

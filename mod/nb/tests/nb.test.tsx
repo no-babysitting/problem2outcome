@@ -3,7 +3,7 @@ import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
 import { bandSVG, wrap } from '../hooks/band-svg.js'
-import { presetLine, strip, WELCOME_BOTH } from '../hooks/colleague.js'
+import { ME_MISSING, presetLine, strip, WELCOME_BOTH } from '../hooks/colleague.js'
 import { languageOf, languageOfText, parseDecisions, progressOf, shellWriteTarget, supportLevels } from '../hooks/decisions.js'
 import { asciiSceneSVG } from '../hooks/scene.js'
 
@@ -47,7 +47,7 @@ type Files = Record<string, { text: string; mtimeMs: number }>
 /** Stands for the user's workspace on disk. */
 const workspace = (on: On, files: Files): void => {
   // The engine hands paths on resolved against the test's working directory: compare them from the workspace root.
-  const rel = (path: string): string => path.replace(/^(?:.*?\/)?(?=(?:tasks|me\.md|AGENTS\.md)(?:\/|$))/, '').replace(/\/+$/, '')
+  const rel = (path: string): string => path.replace(/^(?:.*?\/)?(?=(?:tasks|templates|me\.md|AGENTS\.md)(?:\/|$))/, '').replace(/\/+$/, '')
   const dirs = (path: string): { name: string; kind: 'dir' }[] =>
     [...new Set(Object.keys(files).filter(p => p.startsWith(`${path}/`)).map(p => p.slice(path.length + 1).split('/')[0] ?? ''))].map(name => ({ name, kind: 'dir' }))
 
@@ -530,4 +530,48 @@ test('/nb marks a redo on decision 4 instead of a plain check', async ($, on) =>
   const r = await $.command.run({ command: 'nb', args: '' } as never)
 
   expect(r.text).toMatch(/4\. accept: ↺ redo/)
+})
+
+test('after the agent records an acceptance and me.md is missing, the agent is reminded to create it (review F6-01)', async ($, on) => {
+  engine(on)
+  workspace(on, {
+    'AGENTS.md': { text: '#', mtimeMs: 1 },
+    'templates/me.md': { text: '# Me', mtimeMs: 1 },
+    'tasks/2026-11-20-x/decisions.md': { text: SMALL_ACCEPTED, mtimeMs: 2 },
+  })
+  on('tool.call', () => ({ result: {} }) as never)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  const r = await $.tool.call({ tool: 'Edit', file_path: 'tasks/2026-11-20-x/decisions.md', old_string: 'a', new_string: 'b' } as never)
+
+  expect((r as { context?: readonly string[] }).context).toContain(ME_MISSING)
+})
+
+test('no me.md reminder once me.md exists, or before the task is accepted', async ($, on) => {
+  engine(on)
+  workspace(on, {
+    'AGENTS.md': { text: '#', mtimeMs: 1 },
+    'me.md': { text: '# Me', mtimeMs: 1 },
+    'templates/me.md': { text: '# Me', mtimeMs: 1 },
+    'tasks/2026-11-20-x/decisions.md': { text: SMALL_ACCEPTED, mtimeMs: 2 },
+    'tasks/2026-11-19-y/decisions.md': { text: LARGER_TWO_MADE, mtimeMs: 1 },
+  })
+  on('tool.call', () => ({ result: {} }) as never)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  const withMe = await $.tool.call({ tool: 'Edit', file_path: 'tasks/2026-11-20-x/decisions.md', old_string: 'a', new_string: 'b' } as never)
+
+  expect((withMe as { context?: readonly string[] }).context ?? []).not.toContain(ME_MISSING)
+})
+
+test('no me.md reminder while the task is not accepted yet', async ($, on) => {
+  engine(on)
+  workspace(on, {
+    'AGENTS.md': { text: '#', mtimeMs: 1 },
+    'templates/me.md': { text: '# Me', mtimeMs: 1 },
+    'tasks/2026-11-20-launch/decisions.md': { text: LARGER_TWO_MADE, mtimeMs: 2 },
+  })
+  on('tool.call', () => ({ result: {} }) as never)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  const r = await $.tool.call({ tool: 'Write', file_path: 'tasks/2026-11-20-launch/decisions.md', content: 'x' } as never)
+
+  expect((r as { context?: readonly string[] }).context ?? []).not.toContain(ME_MISSING)
 })

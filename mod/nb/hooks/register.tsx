@@ -17,7 +17,7 @@ import type { EngineInterface, Register, ThemeSetArgs } from 'claude-code'
 import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '../types'
 
 import { bandSVG, bandText } from './band-svg.js'
-import { DECISION_WORDS, nbInstruction, presetLine, STATE_WORDS, strip, UI, WELCOME_BOTH } from './colleague.js'
+import { DECISION_WORDS, ME_MISSING, nbInstruction, presetLine, STATE_WORDS, strip, UI, WELCOME_BOTH } from './colleague.js'
 import { languageOf, languageOfText, parseDecisions, shellWriteTarget, progressOf, supportLevels } from './decisions.js'
 import { makeColors } from './make-colors.js'
 import { asciiSceneSVG } from './scene.js'
@@ -445,7 +445,21 @@ export const register: Register = on => {
     await update($, busyAtom, () => busy)
     await update($, stateAtom, () => (busy > 2 ? 'overloaded' : 'working') as ColleagueState)
     try {
-      return await next(e)
+      const result = await next(e)
+
+      // Safety net for AGENTS.md "First run" 5 (review F6-01): the agent has just recorded an acceptance in this
+      // workspace and me.md is still missing, so the support levels would never start. Tell the agent, not the user.
+      if (WRITES.has(e.tool) && /(^|[\\/])decisions\.md$/.test(String((e as { file_path?: string }).file_path ?? '')) && result.deny === undefined) {
+        const task = await refreshTask($)
+        const needsMe =
+          task?.accepted === true && !(await $.fs.exists('me.md').catch(() => true)) && (await $.fs.exists('templates/me.md').catch(() => false))
+
+        if (needsMe) {
+          return { ...result, context: [...(result.context ?? []), ME_MISSING] }
+        }
+      }
+
+      return result
     } finally {
       const left = Math.max(0, (await read($, busyAtom)) - 1)
 
@@ -454,9 +468,6 @@ export const register: Register = on => {
         await update($, stateAtom, () => 'thinking' as ColleagueState)
       } else if (left <= 2) {
         await update($, stateAtom, () => 'working' as ColleagueState)
-      }
-      if (WRITES.has(e.tool) && /decisions\.md$/.test(String((e as { file_path?: string }).file_path ?? ''))) {
-        await refreshTask($)
       }
     }
   }).catch(($, e, next) => (next.called ? next(e) : next(e)))
