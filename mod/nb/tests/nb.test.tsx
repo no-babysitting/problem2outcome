@@ -1,3 +1,4 @@
+// Run with `claude plugin test mod/nb` from the repository root. A plain `bun test` has no `claude-code/testing` module.
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
@@ -114,6 +115,15 @@ test('decisions: a larger task with the problem and criteria written', () => {
   expect(d.made).toEqual([true, true, false, false])
   expect(d.next).toBe(3)
   expect(progressOf(d)).toBe(0.5)
+})
+
+test('decisions: an unknown Confirmed value counts as not made (n/a, typos)', () => {
+  for (const v of ['n/a', 'N/A', 'maybe', 'yess', '']) {
+    const d = parseDecisions(LARGER_TWO_MADE.replace(/Confirmed: yes[^\n]*/, `Confirmed: ${v}`))
+
+    expect(d.made[0]).toBe(false)
+    expect(d.skipped[0]).toBe(false)
+  }
 })
 
 test('decisions: once a larger task is accepted, the band points at no earlier decision (review F3-02)', () => {

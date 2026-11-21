@@ -40,3 +40,12 @@ These answer at once, without asking the model:
 - The Colleague's line is written by Claude at the end of its reply, inside a `<nb>…</nb>` tag that the add-on hides from the chat. If you copy or export a conversation, or turn the add-on off mid-session, you may see these tags.
 - The add-on speaks English and Vietnamese. Other languages fall back to English.
 - A decision shows as made only when its `decisions.md` section says `Confirmed: yes`, which the agent writes after you confirm in your own words. A draft the agent wrote is not a decision.
+
+## For maintainers
+
+The tests use the host's own test runner, so a plain `bun test` cannot run them (it has no `claude-code/testing` module). From the repository root, with Claude Code installed:
+
+```
+claude plugin validate .
+claude plugin test mod/nb
+```

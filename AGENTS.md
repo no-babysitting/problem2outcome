@@ -49,7 +49,7 @@ A harness's automatic check that a goal is "met" is not decision 4. Only the use
 
 ## Task folders
 
-Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs (save each output there as a file, even when you also show it in chat) and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear and set its name and `Size`. Sections 1 to 3 each have a `Confirmed:` line, and it is what counts, not the words around it:
+Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs (save each output there as a file, even when you also show it in chat) and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear and set its name and `Size`. Sections 1 to 3 each have a `Confirmed:` line, and it is what counts, not the words around it. It takes only these values: `no`, `yes · by: user`, `yes · by: draft`, `skipped`. On a small task, leave sections 1 and 3 at `no`.
 
 - A draft of yours may sit in a section, with `Confirmed: no`.
 - Change it to `Confirmed: yes · by: user` when the user wrote that decision themselves, or `Confirmed: yes · by: draft` when they approved your draft in their own words.
