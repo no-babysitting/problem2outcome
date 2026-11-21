@@ -18,7 +18,7 @@ import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '
 
 import { bandSVG, bandText } from './band-svg.js'
 import { DECISION_WORDS, nbInstruction, presetLine, STATE_WORDS, strip, UI, WELCOME_BOTH } from './colleague.js'
-import { languageOf, languageOfText, parseDecisions, shellWriteTarget, progressOf } from './decisions.js'
+import { languageOf, languageOfText, parseDecisions, shellWriteTarget, progressOf, supportLevels } from './decisions.js'
 import { makeColors } from './make-colors.js'
 import { asciiSceneSVG } from './scene.js'
 
@@ -249,6 +249,14 @@ async function say($: Dollar, text: string): Promise<void> {
 
 // ---------- commands (zero tokens) ----------
 
+const VI_LEVEL: Record<Level, string> = { quiet: 'ít nói', normal: 'nói vừa phải', chatty: 'hay nói' }
+
+/** Support level names for /nb. English as AGENTS.md and me.md write them; Vietnamese glosses. */
+const SUPPORT_WORDS: Record<Lang, Record<'guide' | 'challenge' | 'record', string>> = {
+  en: { guide: 'Guide', challenge: 'Challenge', record: 'Record' },
+  vi: { guide: 'mình dẫn', challenge: 'bạn viết trước', record: 'bạn tự quyết' },
+}
+
 async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ text: string }> {
   const arg = rawArgs.trim().toLowerCase()
   const lang = await read($, langAtom)
@@ -258,7 +266,9 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
     const level = LEVELS.find(l => l === arg)
 
     if (level === undefined) {
-      return { text: vi ? `Mức hiện tại: ${await read($, levelAtom)}. Dùng /mascot quiet, normal hoặc chatty.` : `Now: ${await read($, levelAtom)}. Use /mascot quiet, normal or chatty.` }
+      const now = await read($, levelAtom)
+
+      return { text: vi ? `The Colleague đang ${VI_LEVEL[now]} (${now}). Dùng /mascot quiet, normal hoặc chatty.` : `The Colleague is ${now}. Use /mascot quiet, normal or chatty.` }
     }
     await update($, levelAtom, () => level)
     await $.store.set('nb.level', level)
@@ -266,9 +276,7 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
       await say($, '')
     }
 
-    const viLevel = { quiet: 'ít nói', normal: 'vừa phải', chatty: 'hay nói' }[level]
-
-    return { text: vi ? `The Colleague giờ ${viLevel}.` : `The Colleague: ${level}.` }
+    return { text: vi ? `The Colleague giờ ${VI_LEVEL[level]}.` : `The Colleague is ${level} now.` }
   }
 
   if (name === 'nb-lang') {
@@ -309,8 +317,25 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
     lines.push(`${vi ? 'Việc' : 'Task'}: ${task.name}`)
     for (let i = 0; i < 4; i++) {
       if (task.applies[i]) {
-        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? '✓' : task.skipped[i] ? (vi ? '– bỏ qua' : '– skipped') : task.next === i + 1 ? (vi ? '▍ lượt bạn' : '▍ your turn') : '·'}`)
+        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? (i === 3 && task.redo ? (vi ? '↺ làm lại' : '↺ redo') : '✓') : task.skipped[i] ? (vi ? '– bỏ qua' : '– skipped') : task.next === i + 1 ? (vi ? '▍ lượt bạn' : '▍ your turn') : '·'}`)
       }
+    }
+  }
+
+  // How much help each decision gets (me.md). The help fades as the user gets good at a decision (AGENTS.md).
+  const me = (await $.fs.exists('me.md').catch(() => false)) ? await $.fs.read('me.md').catch(() => '') : null
+
+  if (me === null) {
+    lines.push(vi ? 'Mức hỗ trợ cho từng quyết định sẽ nằm trong me.md, tạo sau việc đầu tiên bạn nghiệm thu.' : 'Help levels per decision go in me.md, made after you accept your first task.')
+  } else {
+    const levels = supportLevels(me)
+
+    if (levels.some(l => l !== null)) {
+      lines.push(
+        `${vi ? 'Mức hỗ trợ (me.md)' : 'Help level (me.md)'}: ${levels
+          .map((l, i) => `${words[i]}: ${l === null ? '?' : SUPPORT_WORDS[lang][l]}`)
+          .join(' · ')}`,
+      )
     }
   }
   lines.push('')

@@ -215,7 +215,7 @@ Các chế độ được mô tả trong `AGENTS.md` và gọi bằng lời nói
 | C17 | Chế độ người dùng chủ động gọi: grill me, challenge me, teach me | AGENTS.md | D1, D3 → A1, A2 |
 | C18 | Skill thật `/grill-me`, `/challenge-me`, `/teach-me` trong mod: hỏi theo vòng bằng AskUserQuestion, mỗi câu có lựa chọn và đề xuất, ghi kết quả vào `decisions.md` | Mod | D1 → A1, A5 |
 | C19 | The Colleague: khuôn mặt ASCII 6 trạng thái theo spec của website, ô chân dung có quầng ký tự theo trạng thái, đổi mặt bằng hiệu ứng scramble 0,35 s | Mod | D4 → A3, A5 |
-| C20 | Lệnh không tốn token: /nb (việc đang ở đâu, mỗi skill để làm gì), /nb-lang, /nb-scene | Mod | P3 → A4 |
+| C20 | Lệnh không tốn token: /nb (việc đang ở đâu, mức hỗ trợ từng quyết định trong me.md, mỗi skill để làm gì), /nb-lang, /nb-scene | Mod | P3 → A4 |
 | C21 | Âm thanh tuỳ chọn, rất nhỏ: gió trên hồ, giọt nước hiếm, vài nốt ngũ cung ngắn khi trạng thái đổi | Mod | D5 → A5 |
 | C22 | Dòng Confirmed: ở mục 1–3 của decisions.md là tín hiệu duy nhất: no, yes · by: user, yes · by: draft, skipped. Mod đọc nó để vẽ bốn quyết định; agent đếm by: user để đề xuất bớt hỗ trợ | Thư mục việc, mod | D2, D3 → A1, A2 |
 

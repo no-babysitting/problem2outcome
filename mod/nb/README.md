@@ -29,7 +29,7 @@ Add-ons need a recent Claude Code; see the [official page on mods](https://code.
 
 These answer at once, without asking the model:
 
-- `/nb`: where your task stands, and what each skill is for.
+- `/nb`: where your task stands, how much help each decision gets (from `me.md`), and what each skill is for.
 - `/mascot quiet | normal | chatty`: how often The Colleague speaks. At `quiet` it says nothing and Claude is not asked for its line.
 - `/nb-lang en | vi`: the add-on's language. It also follows the `Language:` line in your `me.md`; before that exists, it follows your first message of the session.
 - `/nb-scene on | off`: the lake behind the chat.

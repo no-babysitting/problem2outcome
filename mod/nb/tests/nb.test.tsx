@@ -4,7 +4,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { bandSVG, wrap } from '../hooks/band-svg.js'
 import { presetLine, strip, WELCOME_BOTH } from '../hooks/colleague.js'
-import { languageOf, languageOfText, parseDecisions, progressOf, shellWriteTarget } from '../hooks/decisions.js'
+import { languageOf, languageOfText, parseDecisions, progressOf, shellWriteTarget, supportLevels } from '../hooks/decisions.js'
 import { asciiSceneSVG } from '../hooks/scene.js'
 
 // ---------- fixtures ----------
@@ -445,3 +445,48 @@ test('/nb tells where the task stands without a model call', async ($, on) => {
   expect(r.text).toMatch(/your turn/)
 })
 
+
+const ME_LEVELS = `# Me
+
+Language: en
+
+| Decision | Level | Since | Why |
+|---|---|---|---|
+| 1. Real problem | Guide | | first run |
+| 2. Done means | Challenge | 2026-11-20 | wrote own criteria three times |
+| 3. Delegate / keep | Guide | | first run |
+| 4. Accept or redo | Record | | |
+`
+
+test('supportLevels reads the me.md table, English or Vietnamese names, and ignores other rows', () => {
+  expect(supportLevels(ME_LEVELS)).toEqual(['guide', 'challenge', 'guide', 'record'])
+  expect(supportLevels('| 2. Xong là gì | Thử thách | |')).toEqual([null, 'challenge', null, null])
+  expect(supportLevels('Levels: Guide · Challenge · Record')).toEqual([null, null, null, null])
+  expect(supportLevels('| 1. Real problem | Expert | |')).toEqual([null, null, null, null])
+})
+
+test('/nb shows the help level per decision from me.md, and says where it will live before me.md exists', async ($, on) => {
+  engine(on)
+  workspace(on, { 'me.md': { text: ME_LEVELS, mtimeMs: 1 } })
+  const withMe = await $.command.run({ command: 'nb', args: '' } as never)
+
+  expect(withMe.text).toMatch(/Help level \(me\.md\): real problem: Guide · done means: Challenge · delegate: Guide · accept: Record/)
+})
+
+test('/nb before me.md exists explains when the levels appear', async ($, on) => {
+  engine(on)
+  workspace(on, {})
+  const r = await $.command.run({ command: 'nb', args: '' } as never)
+
+  expect(r.text).toMatch(/made after you accept your first task/)
+})
+
+test('/nb marks a redo on decision 4 instead of a plain check', async ($, on) => {
+  engine(on)
+  const redone = LARGER_TWO_MADE.replace('accepted on first try | redo (why)', 'redo (too long)')
+
+  workspace(on, { 'tasks/2026-11-20-launch/decisions.md': { text: redone, mtimeMs: 5 } })
+  const r = await $.command.run({ command: 'nb', args: '' } as never)
+
+  expect(r.text).toMatch(/4\. accept: ↺ redo/)
+})

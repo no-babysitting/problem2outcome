@@ -126,3 +126,27 @@ export function languageOfText(text: string): 'vi' | null {
 
   return VI_LETTERS.test(lower) && (lower.match(ACCENTED)?.length ?? 0) >= 3 ? 'vi' : null
 }
+
+export type Support = 'guide' | 'challenge' | 'record'
+
+/**
+ * The support level per decision from the table in me.md (`| 2. Done means | Challenge | … |`), or null where a row
+ * is missing or says something else. English names as the template writes them; a user who wrote the Vietnamese
+ * name is read too.
+ */
+export function supportLevels(meText: string): [Support | null, Support | null, Support | null, Support | null] {
+  const out: [Support | null, Support | null, Support | null, Support | null] = [null, null, null, null]
+
+  for (const line of stripComments(meText).split(/\r?\n/)) {
+    const cells = line.split('|').map(c => c.trim())
+    const n = /^([1-4])\b/.exec(cells[1] ?? '')?.[1]
+    const level = (cells[2] ?? '').toLowerCase()
+
+    if (n === undefined || !line.trim().startsWith('|')) {
+      continue
+    }
+    out[Number(n) - 1] = /^(guide|dẫn)/.test(level) ? 'guide' : /^(challenge|thử|phản)/.test(level) ? 'challenge' : /^(record|ghi)/.test(level) ? 'record' : null
+  }
+
+  return out
+}
