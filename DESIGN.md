@@ -205,7 +205,7 @@ Các chế độ được mô tả trong `AGENTS.md` và gọi bằng lời nói
 | C7 | Thói quen bảo trì: mỗi bản lớn, xoá chỉ dẫn agent đã tự làm tốt | Repo | P2 → A4 |
 | C8 | Giữ lại một lần trước lần ghi file đầu nếu quyết định 2 chưa `Confirmed: yes` hay `skipped` (`tool.call` + `$.ui.ask`). Bắt cả Write, Edit và lệnh shell ghi bằng `>` hoặc `tee` | Mod | D1 → A1 |
 | C9 | Context ẩn yêu cầu Claude viết kèm một dòng `<nb>` cuối câu trả lời, không gửi khi mascot ở mức `quiet`; mod ẩn dòng này khỏi `AssistantMessage` rồi hiện nó trong dải phía trên ô nhập | Mod | D4 → A3 |
-| C10 | Câu viết sẵn theo trạng thái bằng tiếng Anh và tiếng Việt, nằm trong code của mod; ngôn ngữ khác dùng tiếng Anh. Ý dịch một lần rồi lưu trong `$.store` đã bỏ khỏi v0 | Mod | D4 → A3, A4 |
+| C10 | Câu viết sẵn theo trạng thái bằng tiếng Anh và tiếng Việt, nằm trong code của mod; ngôn ngữ khác dùng tiếng Anh. Trước khi có me.md, băng nói tiếng Anh cho tới khi một tin nhắn rõ là tiếng Việt (có hoặc không dấu; tên riêng không tính), rồi nói tiếng Việt đến hết phiên. Ý dịch một lần rồi lưu trong `$.store` đã bỏ khỏi v0 | Mod | D4 → A3, A4 |
 | C11 | Hình nền hồ ASCII theo tiến độ bốn quyết định: mặt trời lên dần, nhiễu thành trật tự (M11) lan ra từ mặt trời mỗi khi một quyết định được chốt; mọi hoạt ảnh đều dừng. Đồng hồ ngữ cảnh đọc `$.session.usage()` và `session.measure` | Mod | D5 → A5 |
 | C12 | Không có trong v0: gợi ý câu tiếp theo bằng `$.prompt.suggest`. Dòng của The Colleague và bốn quyết định đã cho biết việc tiếp theo là của ai | Mod | D1 → A4 |
 | C13 | Mod không tự duyệt tool call, không sửa chữ người dùng gõ, không sửa system prompt | Mod | P1 → A1 |

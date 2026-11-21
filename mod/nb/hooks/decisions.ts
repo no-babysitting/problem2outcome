@@ -116,15 +116,40 @@ export function shellWriteTarget(command: string): string | null {
   return target === '' || target.startsWith('/dev/') ? null : target
 }
 
-/** Letters few languages but Vietnamese use. */
-const VI_LETTERS = /[ăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/u
-const ACCENTED = /[à-ỹ]/gu
+/** Vietnamese letters with a mark (lowercase). */
+const VI_MARKED = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ'
+/** Of those, the ones Romanian, Croatian, French or Spanish do not use: a word holding one is Vietnamese. */
+const VI_ONLY = /[ơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹĩũ]/u
+/** Common Vietnamese words typed without marks, as people do in quick messages. None is an English word. */
+const VI_PLAIN = new Set(
+  'minh giup khach khong duoc nhe voi viet gui lam cua nhung cac roi chua toi cho cu chup anh dang sao nhieu mot thi xong viec hom tuan thang tieng nguoi hoi tra loi giam nhan duoi truoc sau nhu'.split(' '),
+)
 
-/** A prompt is Vietnamese when it has a letter only Vietnamese uses and at least three accented letters (a lone name like "Nguyễn" is not). */
+/**
+ * The words that say what language a message is in: every word except names, so a capitalised word counts only
+ * when it opens a sentence. "Write to Lê Quốc Việt" leaves no Vietnamese word to count.
+ */
+const plainWords = (text: string): string[] =>
+  text
+    .split(/[.!?\n]+/)
+    .flatMap(sentence => (sentence.match(/\p{L}+/gu) ?? []).filter((w, i) => i === 0 || w === w.toLowerCase()))
+    .map(w => w.toLowerCase())
+
+/**
+ * A prompt is Vietnamese when at least three of its words (names left out) are Vietnamese and they make up at least
+ * 30% of the words: with marks (and one letter only Vietnamese uses), or common words typed without marks.
+ */
 export function languageOfText(text: string): 'vi' | null {
-  const lower = text.toLowerCase()
+  const words = plainWords(text)
 
-  return VI_LETTERS.test(lower) && (lower.match(ACCENTED)?.length ?? 0) >= 3 ? 'vi' : null
+  if (words.length === 0) {
+    return null
+  }
+  const marked = words.filter(w => [...w].some(c => VI_MARKED.includes(c)) && [...w].every(c => c <= '\u007f' || VI_MARKED.includes(c)))
+  const plain = words.filter(w => VI_PLAIN.has(w))
+  const enough = (n: number): boolean => n >= 3 && n / words.length >= 0.3
+
+  return (enough(marked.length) && marked.some(w => VI_ONLY.test(w))) || enough(plain.length) ? 'vi' : null
 }
 
 export type Support = 'guide' | 'challenge' | 'record'
@@ -138,7 +163,7 @@ export function supportLevels(meText: string): [Support | null, Support | null, 
   const out: [Support | null, Support | null, Support | null, Support | null] = [null, null, null, null]
 
   for (const line of stripComments(meText).split(/\r?\n/)) {
-    const cells = line.split('|').map(c => c.trim())
+    const cells = line.split('|').map(c => c.replace(/[*_`~]/g, '').trim())
     const n = /^([1-4])\b/.exec(cells[1] ?? '')?.[1]
     const level = (cells[2] ?? '').toLowerCase()
 

@@ -342,6 +342,47 @@ test('languageOfText: Vietnamese letters, not a single accent', () => {
   expect(languageOfText('chụp ảnh gia đình')).toBe('vi')
 })
 
+test('languageOfText: Vietnamese names in English text, Romanian and Croatian stay English; Vietnamese without marks is found (review F5-01, O5-03)', () => {
+  for (const en of [
+    'Write an email to Nguyễn Văn Đức about the invoice',
+    'Book a shoot for Trần Thị Mỹ Linh next week',
+    'Invite Lê Quốc Việt and Phạm Thị Hương to the review',
+    'Send the quote to Đặng Hoàng Anh',
+    'Mulțumesc pentru răspunsul tău, vă trimit mâine documentele',
+    'Pošalji email Đorđe Petroviću i Ani',
+    'hi',
+    'ok',
+    'Write the brief for Viet and Anh',
+  ]) {
+    expect([en, languageOfText(en)]).toEqual([en, null])
+  }
+  for (const vi of ['viet email cho khach cu', 'giup minh lam bao gia nhe', 'Mình cần một kế hoạch ra mắt', 'Lan ơi, viết giúp mình thư cảm ơn khách nhé']) {
+    expect([vi, languageOfText(vi)]).toEqual([vi, 'vi'])
+  }
+})
+
+test('first run: "hi" first decides nothing; a later clearly Vietnamese message switches the band (review O5-03)', async ($, on) => {
+  engine(on)
+  workspace(on, {})
+  const contexts: (readonly string[] | undefined)[] = []
+
+  on('prompt.submit', (_, e) => {
+    contexts.push(e.context)
+
+    return { text: e.text, context: e.context } as never
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  await $.prompt.submit({ text: 'hi' } as never)
+  await $.prompt.submit({ text: 'viet email cho khach cu moi chup anh Tet' } as never)
+
+  expect(contexts[0]?.some(c => c.includes('Vietnamese'))).toBe(false)
+  expect(contexts[1]?.some(c => c.includes('Vietnamese'))).toBe(true)
+})
+
+test('supportLevels reads rows written in bold or code (review O5-04)', () => {
+  expect(supportLevels('| **1. Real problem** | **Challenge** | |\n| `2. Done means` | _Record_ | |')).toEqual(['challenge', 'record', null, null])
+})
+
 test('before the first write with no criteria, ask once; "not yet" stops the write', async ($, on) => {
   engine(on)
   workspace(on, { 'AGENTS.md': { text: '#', mtimeMs: 1 }, 'tasks/2026-11-20-x/decisions.md': { text: TEMPLATE, mtimeMs: 2 } })

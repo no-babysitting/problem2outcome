@@ -390,12 +390,11 @@ export const register: Register = on => {
     await update($, stateAtom, () => 'thinking' as ColleagueState)
     await say($, '')
 
-    // No me.md language and no /nb-lang yet: the band speaks the language of the first prompt (vi or en), for this session only.
-    if (!(await read($, langFixedAtom))) {
+    // No me.md language and no /nb-lang yet: the band speaks English until a message is clearly Vietnamese, then
+    // Vietnamese for the rest of the session. A short "hi" or "ok" decides nothing (review O5-03).
+    if (!(await read($, langFixedAtom)) && languageOfText(e.text ?? '') === 'vi') {
       await update($, langFixedAtom, () => true)
-      if (languageOfText(e.text ?? '') === 'vi') {
-        await update($, langAtom, () => 'vi' as Lang)
-      }
+      await update($, langAtom, () => 'vi' as Lang)
     }
 
     // At "quiet" the bubble shows nothing, so Claude is not asked for a line nobody would see (P3, C14).

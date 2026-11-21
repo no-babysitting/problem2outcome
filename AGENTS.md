@@ -45,14 +45,14 @@ A harness's automatic check that a goal is "met" is not decision 4. Only the use
 - **Small task** (minutes, low stakes): only decisions 2 and 4, one line each.
 - **Larger task**: all four, still short.
 - If the user says to skip a pause ("don't ask", "just write it"), skip it without arguing, but still create the task folder and its `decisions.md`, and write `Confirmed: skipped`, not `no`, in each section they skipped.
-- Skipping a pause is never accepting: only the user's own words set the `Decision:` line. If they ask you in words to record that they accept, that is their decision: write `Decision: accepted · by: user` with their words quoted, and do not mark any criterion met for them. In the Result section, write met or not met only against criteria the user confirmed; with none confirmed, write that there were none, not a self-check of your own.
+- Skipping a pause is never accepting: only the user's own words set the `Decision:` line. If they ask you in words to record that they accept, that is their decision: write `Decision: accepted · by: user` with their words quoted, and do not mark any criterion met for them. For example, "ghi vào là mình đã chấp nhận nhé" or "mark it as accepted" is their acceptance: write it, and do not refuse or ask them to say it again. In the Result section, write met or not met only against criteria the user confirmed; with none confirmed, write that there were none, not a self-check of your own.
 
 ## Task folders
 
 Each task gets a folder `tasks/YYYY-MM-DD-short-name/` holding its outputs (save each output there as a file, even when you also show it in chat) and a `decisions.md` copied from `templates/decisions.md`. Create it as soon as the task is clear and set its name and `Size`. Sections 1 to 3 each have a `Confirmed:` line, and it is what counts, not the words around it. It takes only these values: `no`, `yes · by: user`, `yes · by: draft`, `skipped`. On a small task, leave sections 1 and 3 at `no`.
 
 - A draft of yours may sit in a section, with `Confirmed: no`.
-- Change it to `Confirmed: yes · by: user` when the user wrote that decision themselves, or `Confirmed: yes · by: draft` when they approved your draft in their own words.
+- Change it to `Confirmed: yes · by: user` when the user wrote that decision themselves, or `Confirmed: yes · by: draft` when they approved your draft in their own words. If they agreed in advance ("whatever you propose is fine"), show the draft in chat and go on: that counts as `by: draft`, with no second ok needed.
 - `Confirmed: skipped` when they asked to skip that pause.
 - When the user answers your questions for a pause and tells you to go on, that is approval: set that section to `Confirmed: yes · by: draft` (or `by: user`) before you start the next step. Never start the work with a section that applies still at `no`.
 
