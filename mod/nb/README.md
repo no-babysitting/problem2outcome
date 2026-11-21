@@ -38,7 +38,7 @@ These answer at once, without asking the model:
 
 - The pause before the first file catches the agent's usual ways of writing a file, including a shell command that writes with `>` or `tee`. It is a safety net; the main guard is `AGENTS.md`.
 - The Colleague's line is written by Claude at the end of its reply, inside a `<nb>…</nb>` tag that the add-on hides from the chat. If you copy or export a conversation, or turn the add-on off mid-session, you may see these tags.
-- If the agent records that you accepted a task and `me.md` is still missing, the add-on quietly reminds the agent to create it, so your help levels can start.
+- If the agent records that you accepted a task and `me.md` is still missing, the add-on quietly reminds the agent to create it, so your help levels can start. This reminder uses a field the engine's type file describes but the public mod docs do not list yet; if a later Claude Code version drops it, the same rule in `AGENTS.md` and `templates/decisions.md` still applies.
 - The add-on speaks English and Vietnamese. Other languages fall back to English.
 - A decision shows as made only when its `decisions.md` section says `Confirmed: yes`, which the agent writes after you confirm in your own words. A draft the agent wrote is not a decision.
 

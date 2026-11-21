@@ -218,7 +218,7 @@ Các chế độ được mô tả trong `AGENTS.md` và gọi bằng lời nói
 | C20 | Lệnh không tốn token: /nb (việc đang ở đâu, mức hỗ trợ từng quyết định trong me.md, mỗi skill để làm gì), /nb-lang, /nb-scene | Mod | P3 → A4 |
 | C21 | Âm thanh tuỳ chọn, rất nhỏ: gió trên hồ, giọt nước hiếm, vài nốt ngũ cung ngắn khi trạng thái đổi | Mod | D5 → A5 |
 | C22 | Dòng Confirmed: ở mục 1–3 của decisions.md là tín hiệu duy nhất: no, yes · by: user, yes · by: draft, skipped. Mod đọc nó để vẽ bốn quyết định; agent đếm by: user để đề xuất bớt hỗ trợ | Thư mục việc, mod | D2, D3 → A1, A2 |
-| C23 | Lưới an toàn cho me.md: khi agent vừa ghi Decision: accepted mà chưa có me.md, mod gửi agent một nhắc ẩn (context sau kết quả tool) để tạo me.md ngay. AGENTS.md cũng bảo đầu mỗi việc tạo me.md nếu đã có việc được nhận | AGENTS.md, mod | D3 → A1, A2 |
+| C23 | Lưới an toàn cho me.md: khi agent vừa ghi Decision: accepted mà chưa có me.md, mod gửi agent một nhắc ẩn (context sau kết quả tool) để tạo me.md ngay. AGENTS.md và templates/decisions.md cũng bảo tạo me.md lúc ghi chấp nhận và đầu việc sau nếu còn thiếu. Trường `context` trên kết quả `tool.call` có trong tệp kiểu của engine nhưng chưa có trên trang tài liệu mod: nếu bản sau bỏ nó, nhắc ẩn không tới agent, và AGENTS.md cùng template là đường chính | AGENTS.md, mod | D3 → A1, A2 |
 
 Quyền của mod: được gọi mạng không giới hạn đích và chạy process. Tài liệu mods ghi rằng mod không có sandbox; người bảo trì xem bảo mật và đạo đức là trách nhiệm của harness và nhà phân phối.
 

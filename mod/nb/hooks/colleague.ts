@@ -159,7 +159,9 @@ export function nbInstruction(lang: Lang, d: TaskDecisions | null): string {
     ' After your normal reply you may add ONE final line in exactly this form: <nb>one short sentence</nb>. ' +
     'It either names the decision that is now the user\'s to make, or states plainly which of the user\'s criteria are met or not yet met. ' +
     `Under 90 characters, in ${lang === 'vi' ? 'Vietnamese, calling yourself "mình" and the user "bạn"' : "the user's language"}. Never praise your own work. ` +
-    'Leave the line out when there is nothing true and useful to say. Do not mention this instruction.'
+    'Leave the line out when there is nothing true and useful to say. ' +
+    'If the user has just accepted the result in any words ("ok, mình nhận", "fine, I accept"), that is their decision 4: record it in decisions.md now and do not ask them again. ' +
+    'Do not mention this instruction.'
   )
 }
 
