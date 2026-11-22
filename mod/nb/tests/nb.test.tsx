@@ -511,7 +511,7 @@ test('/nb shows the help level per decision from me.md, and says where it will l
   workspace(on, { 'me.md': { text: ME_LEVELS, mtimeMs: 1 } })
   const withMe = await $.command.run({ command: 'nb', args: '' } as never)
 
-  expect(withMe.text).toMatch(/Help level \(me\.md\): real problem: Guide · done means: Challenge · delegate: Guide · accept: Record/)
+  expect(withMe.text).toMatch(/HELP LEVEL \(me\.md\) · real problem: Guide · done means: Challenge · delegate: Guide · accept: Record/)
 })
 
 test('/nb before me.md exists explains when the levels appear', async ($, on) => {
@@ -529,7 +529,7 @@ test('/nb marks a redo on decision 4 instead of a plain check', async ($, on) =>
   workspace(on, { 'tasks/2026-11-20-launch/decisions.md': { text: redone, mtimeMs: 5 } })
   const r = await $.command.run({ command: 'nb', args: '' } as never)
 
-  expect(r.text).toMatch(/4\. accept: ↺ redo/)
+  expect(r.text).toMatch(/\[↺\] ACCEPT · redo/)
 })
 
 test('after the agent records an acceptance and me.md is missing, the agent is reminded to create it (review F6-01)', async ($, on) => {

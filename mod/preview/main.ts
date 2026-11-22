@@ -6,6 +6,7 @@ import { bandSVG } from '../nb/hooks/band-svg.js'
 import { presetLine } from '../nb/hooks/colleague.js'
 import { parseDecisions, progressOf } from '../nb/hooks/decisions.js'
 import { asciiSceneSVG } from '../nb/hooks/scene.js'
+import { statusText } from '../nb/hooks/status.js'
 
 const TEMPLATE = (size: string, made: number, accepted: boolean): string => {
   const larger = size === 'larger'
@@ -55,6 +56,28 @@ function draw(): void {
     limit: { kind: 'five_hour', percentUsed: 37 },
     lang,
   })
+  // The /nb command's text, as the mod writes it, lightly coloured. me.md appears once the task is accepted.
+  const accepted = d !== null && made >= steps
+  const text = statusText({ lang, task: d, levels: accepted ? ['guide', 'guide', 'guide', 'guide'] : null, level: 'normal', scene: sceneOn })
+  const esc = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const KEY: Record<string, string> = { '✓': 'k-done', '↺': 'k-redo', '–': 'k-skip' }
+
+  document.getElementById('status')!.innerHTML = text
+    .split('\n')
+    .map(l => {
+      const row = /^\[(.)\] (.+?)( · (.*))?$/.exec(l)
+
+      if (row !== null) {
+        const [, k = '', label = '', , note = ''] = row
+        const isNext = note.startsWith('▍')
+
+        return `<span class="${KEY[k] ?? 'k-num'}">[${esc(k)}]</span> <span class="lab${isNext ? ' next' : ''}">${esc(label)}</span>${note === '' ? '' : ` · ${esc(note)}`}`
+      }
+      const head = /^([^·]+?) · (.*)$/.exec(l)
+
+      return head === null ? esc(l) : `<span class="lab">${esc(head[1] ?? '')}</span> · ${esc(head[2] ?? '').replace(/(\/[a-z-]+)/g, '<span class="cmd">$1</span>')}`
+    })
+    .join('\n')
   document.getElementById('sceneNote')!.textContent =
     lang === 'vi' ? `Mặt trời ở mức ${progress * 4}/4: theo số quyết định đã chốt.` : `Sun at ${progress * 4}/4: follows the decisions made.`
 }

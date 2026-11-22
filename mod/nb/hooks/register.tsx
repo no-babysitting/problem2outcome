@@ -17,10 +17,11 @@ import type { EngineInterface, Register, ThemeSetArgs } from 'claude-code'
 import type { Bubble, ColleagueState, Lang, Level, TaskDecisions, Usage } from '../types'
 
 import { bandSVG, bandText } from './band-svg.js'
-import { DECISION_WORDS, ME_MISSING, nbInstruction, presetLine, STATE_WORDS, strip, UI, WELCOME_BOTH } from './colleague.js'
+import { ME_MISSING, nbInstruction, presetLine, STATE_WORDS, strip, UI, WELCOME_BOTH } from './colleague.js'
 import { languageOf, languageOfText, parseDecisions, shellWriteTarget, progressOf, supportLevels } from './decisions.js'
 import { makeColors } from './make-colors.js'
 import { asciiSceneSVG } from './scene.js'
+import { statusText } from './status.js'
 
 type Dollar = EngineInterface
 
@@ -257,12 +258,6 @@ async function say($: Dollar, text: string): Promise<void> {
 
 const VI_LEVEL: Record<Level, string> = { quiet: 'ít nói', normal: 'nói vừa phải', chatty: 'hay nói' }
 
-/** Support level names for /nb. English as AGENTS.md and me.md write them; Vietnamese glosses. */
-const SUPPORT_WORDS: Record<Lang, Record<'guide' | 'challenge' | 'record', string>> = {
-  en: { guide: 'Guide', challenge: 'Challenge', record: 'Record' },
-  vi: { guide: 'mình dẫn', challenge: 'bạn viết trước', record: 'bạn tự quyết' },
-}
-
 async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ text: string }> {
   const arg = rawArgs.trim().toLowerCase()
   const lang = await read($, langAtom)
@@ -314,45 +309,10 @@ async function runCommand($: Dollar, name: string, rawArgs: string): Promise<{ t
   const task = await refreshTask($)
   const level = await read($, levelAtom)
   const scene = await read($, sceneAtom)
-  const words = DECISION_WORDS[lang]
-  const lines: string[] = []
-
-  if (task === null) {
-    lines.push(vi ? 'Chưa có việc nào trong tasks/. Cứ nói với Claude việc bạn muốn làm.' : 'No task in tasks/ yet. Just tell Claude what you want done.')
-  } else {
-    lines.push(`${vi ? 'Việc' : 'Task'}: ${task.name}`)
-    for (let i = 0; i < 4; i++) {
-      if (task.applies[i]) {
-        lines.push(`  ${i + 1}. ${words[i]}: ${task.made[i] ? (i === 3 && task.redo ? (vi ? '↺ làm lại' : '↺ redo') : '✓') : task.skipped[i] ? (vi ? '– bỏ qua' : '– skipped') : task.next === i + 1 ? (vi ? '▍ lượt bạn' : '▍ your turn') : '·'}`)
-      }
-    }
-  }
-
   // How much help each decision gets (me.md). The help fades as the user gets good at a decision (AGENTS.md).
   const me = (await $.fs.exists('me.md').catch(() => false)) ? await $.fs.read('me.md').catch(() => '') : null
 
-  if (me === null) {
-    lines.push(vi ? 'Mức hỗ trợ cho từng quyết định sẽ nằm trong me.md, tạo sau việc đầu tiên bạn nghiệm thu.' : 'Help levels per decision go in me.md, made after you accept your first task.')
-  } else {
-    const levels = supportLevels(me)
-
-    if (levels.some(l => l !== null)) {
-      lines.push(
-        `${vi ? 'Mức hỗ trợ (me.md)' : 'Help level (me.md)'}: ${levels
-          .map((l, i) => `${words[i]}: ${l === null ? '?' : SUPPORT_WORDS[lang][l]}`)
-          .join(' · ')}`,
-      )
-    }
-  }
-  lines.push('')
-  lines.push(`/mascot ${level} · /nb-lang ${lang} · /nb-scene ${scene ? 'on' : 'off'}`)
-  lines.push(
-    vi
-      ? '/grill-me: hỏi vặn cho rõ việc · /challenge-me: phản biện quyết định của bạn · /teach-me: tóm tắt tài liệu chính thức'
-      : '/grill-me: sharpen the task · /challenge-me: argue against your decision · /teach-me: the official docs, in a few lines',
-  )
-
-  return { text: lines.join('\n') }
+  return { text: statusText({ lang, task, levels: me === null ? null : supportLevels(me), level, scene }) }
 }
 
 // ---------- hooks ----------

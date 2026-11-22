@@ -49,20 +49,39 @@ header p { margin: 0; color: var(--muted); max-width: 70ch; }
 .prompt { margin: 6px 0 16px; border: 1px solid var(--line); background: var(--raised); padding: 12px 14px; color: var(--subtle); font-size: 14px; display: flex; justify-content: space-between; }
 .prompt kbd { font: 11px var(--mono); color: var(--subtle); }
 .note { font: 12px var(--mono); color: var(--subtle); margin: 0; }
-.faces { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
-.faces div { background: var(--raised); padding: 12px 14px; display: grid; gap: 2px; }
-.faces b { font: 600 20px var(--mono); }
-.faces span { font-size: 13px; color: var(--muted); }
+.faces { display: grid; }
+.faces div { display: grid; grid-template-columns: 7.5em 1fr; align-items: baseline; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--line); }
+.faces div:first-child { border-top: 0; }
+.faces b { font: 600 15px var(--mono); white-space: nowrap; }
+.faces span { font: 500 10.5px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+/* claude.dev layout language (v3): mono uppercase labels with [k] keys, joined filled/outlined tags, hairlines, flat. */
+.eyebrow { display: flex; gap: 0; font: 600 10.5px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+.eyebrow b, .eyebrow i { font-style: normal; padding: 4px 7px; border: 1px solid var(--accent); }
+.eyebrow b { background: var(--accent); color: var(--sunken); }
+.eyebrow i { color: var(--accent); border-left: 0; }
+.controls label .k { color: var(--fg); }
+.below { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { border: 1px solid var(--line); background: var(--raised); min-width: 0; }
+.panel h2 { margin: 0; display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); font: 600 10.5px/1.3 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--subtle); }
+.panel h2 span { color: var(--fg); }
+.panel h2 em { font-style: normal; color: var(--accent); }
+.term { margin: 0; padding: 12px 14px 14px; font: 12.5px/1.7 var(--mono); color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.term .lab { color: var(--fg); letter-spacing: .04em; }
+.term .k-done { color: #8cc084; } .term .k-redo { color: #e2b04a; } .term .k-skip { color: var(--subtle); } .term .k-num { color: var(--subtle); }
+.term .next { color: var(--fg); font-weight: 600; box-shadow: inset 0 -1px 0 var(--accent); }
+.term .cmd { color: var(--accent); }
+@media (max-width: 860px) { .below { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .window { aspect-ratio: auto; min-height: 640px; } .user { max-width: 92%; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 </style>
 <div class="wrap">
   <header>
+    <div class="eyebrow"><b>NB mod</b><i>v0.1 · xem trước</i></div>
     <h1>[•_•] <span>NB</span> cho Claude Desktop</h1>
-    <p>Bản xem trước dùng đúng mã vẽ của mod: The Colleague và bong bóng trên ô nhập, bốn quyết định của việc đang làm, đồng hồ ngữ cảnh, và cảnh ASCII màu phía sau với mặt trời lên theo số quyết định bạn đã chốt. Đổi các ô bên dưới để xem từng trạng thái.</p>
+    <p>Bản xem trước dùng đúng mã vẽ của mod: The Colleague và câu nói của nó ngay trên ô nhập, bốn quyết định của việc đang làm, mức ngữ cảnh và hạn dùng, kết quả lệnh /nb, và cảnh ASCII màu phía sau với mặt trời lên theo số quyết định bạn đã chốt. Đổi các ô bên dưới để xem từng trạng thái.</p>
   </header>
   <div class="controls">
-    <label for="state">Colleague
+    <label for="state"><span><span class="k">[1]</span> Colleague</span>
       <select id="state">
         <option value="idle">idle: chờ bạn</option>
         <option value="thinking">thinking: đọc, lên kế hoạch</option>
@@ -71,15 +90,15 @@ header p { margin: 0; color: var(--muted); max-width: 70ch; }
         <option value="overloaded">overloaded: nhiều việc</option>
         <option value="verified">verified: đạt tiêu chí</option>
       </select></label>
-    <label for="size">Cỡ việc
+    <label for="size"><span><span class="k">[2]</span> Cỡ việc</span>
       <select id="size"><option value="larger">lớn: 4 quyết định</option><option value="small">nhỏ: quyết định 2 và 4</option></select></label>
-    <label for="made">Đã chốt <output id="madeOut">1/4</output>
+    <label for="made"><span><span class="k">[3]</span> Đã chốt <output id="madeOut">1/4</output></span>
       <input id="made" type="range" min="0" max="4" value="1"></label>
-    <label for="ctx">Context <output id="ctxOut">42%</output>
+    <label for="ctx"><span><span class="k">[4]</span> Ngữ cảnh <output id="ctxOut">42%</output></span>
       <input id="ctx" type="range" min="0" max="100" value="42"></label>
-    <label for="lang">Ngôn ngữ
+    <label for="lang"><span><span class="k">[5]</span> Ngôn ngữ</span>
       <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
-    <label for="line">Câu trong bong bóng (trống: câu viết sẵn)
+    <label for="line"><span><span class="k">[6]</span> Câu của Colleague (trống: câu viết sẵn)</span>
       <input id="line" type="text" placeholder="Ví dụ: Tiêu chí 1 và 2 đạt, tiêu chí 3 chưa."></label>
     <label class="check" for="notask"><input id="notask" type="checkbox"> chưa có việc</label>
     <label class="check" for="scene"><input id="scene" type="checkbox" checked> cảnh nền</label>
@@ -100,14 +119,23 @@ header p { margin: 0; color: var(--muted); max-width: 70ch; }
     </div>
   </div>
   <p class="note" id="sceneNote"></p>
-  <div class="faces" aria-label="Bảy trạng thái của The Colleague">
-    <div><b style="color:#ada395">[•_•]</b><span>chờ bạn</span></div>
-    <div><b style="color:#ada395">[ •_•]</b><span>để ý bạn (bản sau)</span></div>
-    <div><b style="color:#8fb3d9">[°_°]…</b><span>đọc và lên kế hoạch</span></div>
-    <div><b style="color:#d97a4a">[&gt;_&lt;]≡</b><span>đang chạy công cụ</span></div>
-    <div><b style="color:#e2b04a">[•_•]?</b><span>hỏi bạn, bong bóng im</span></div>
-    <div><b style="color:#e2b04a">[@_@]</b><span>từ 3 việc song song</span></div>
-    <div><b style="color:#8cc084">[^_^]✓</b><span>bạn vừa nghiệm thu</span></div>
+  <div class="below">
+    <section class="panel" aria-label="Kết quả lệnh /nb">
+      <h2><span><em>/nb</em> · việc đang làm</span><span>0 token</span></h2>
+      <pre class="term" id="status"></pre>
+    </section>
+    <section class="panel" aria-label="Bảy trạng thái của The Colleague">
+      <h2><span>The Colleague</span><span>7 trạng thái</span></h2>
+    <div class="faces">
+      <div><b style="color:#ada395">[•_•]</b><span>chờ bạn</span></div>
+      <div><b style="color:#ada395">[ •_•]</b><span>để ý bạn (bản sau)</span></div>
+      <div><b style="color:#8fb3d9">[°_°]…</b><span>đọc và lên kế hoạch</span></div>
+      <div><b style="color:#d97a4a">[&gt;_&lt;]≡</b><span>đang chạy công cụ</span></div>
+      <div><b style="color:#e2b04a">[•_•]?</b><span>hỏi bạn, không nói thêm</span></div>
+      <div><b style="color:#e2b04a">[@_@]</b><span>từ 3 việc song song</span></div>
+      <div><b style="color:#8cc084">[^_^]✓</b><span>bạn vừa nghiệm thu</span></div>
+    </div>
+    </section>
   </div>
 </div>
 <script src="main.js"></script>
