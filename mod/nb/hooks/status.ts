@@ -51,7 +51,8 @@ export function statusText(s: StatusInput): string {
     lines.push(`${up(vi ? 'Việc' : 'Task')} · ${vi ? 'chưa có việc nào trong tasks/. Cứ nói với Claude việc bạn muốn làm.' : 'no task in tasks/ yet. Just tell Claude what you want done.'}`)
   } else {
     const rows = statusRows(s.lang, s.task)
-    const done = rows.filter(r => r.key === '✓' || r.key === '↺' || r.key === '–').length
+    // Counted as the band counts: made (✓ or ↺), not skipped (review F9-03).
+    const done = rows.filter(r => r.key === '✓' || r.key === '↺').length
 
     lines.push(`${up(vi ? 'Việc' : 'Task')} · ${s.task.name} · ${done}/${rows.length}`)
     for (const r of rows) {

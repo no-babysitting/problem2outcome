@@ -266,7 +266,10 @@ export function bandSVG(m: BandModel): string {
   const applies = d === null ? 0 : d.applies.filter(Boolean).length
   const made = d === null ? 0 : d.applies.filter((a, i) => a && d.made[i]).length
   const t2 = d === null ? { svg: '', w: 0 } : tag(left + t1.w, 6, `${made}/${applies}`, false, '')
-  const lines = m.line === '' ? [] : wrap(m.line, 440)
+  // Wrapped at 420 px, under the 470 px clip: Be Vietnam Pro runs a few percent wider than the fallback fonts.
+  const lines = m.line === '' ? [] : wrap(m.line, 420)
+  // Two lines sit 3 px higher, so descenders on the second line clear the rule at H - 29 (review F9-01).
+  const sayY = lines.length > 1 ? 36 : 39
   const say =
     lines.length === 0
       ? ''
@@ -274,8 +277,8 @@ export function bandSVG(m: BandModel): string {
         lines
           .map(
             (l, i) =>
-              `<clipPath id="nbb-ty${i}"><rect x="${left}" y="${24 + i * 17}" width="470" height="20" class="ty ty${i}"/></clipPath>` +
-              `<text x="${left}" y="${39 + i * 17}" class="say" clip-path="url(#nbb-ty${i})">${xml(l)}</text>`,
+              `<clipPath id="nbb-ty${i}"><rect x="${left}" y="${sayY - 15 + i * 16}" width="470" height="20" class="ty ty${i}"/></clipPath>` +
+              `<text x="${left}" y="${sayY + i * 16}" class="say" clip-path="url(#nbb-ty${i})">${xml(l)}</text>`,
           )
           .join('') +
         `</g>`

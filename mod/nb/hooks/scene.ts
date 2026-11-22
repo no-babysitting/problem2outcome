@@ -452,13 +452,14 @@ export function asciiSceneSVG(
     `<style>${scopeCSS(`text{font:13px "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre}${css}${motion}`, 'nbs')}</style>` +
     `<rect width="${W}" height="${H}" fill="#0f0d0b"/>` +
     // Light, not glyphs: the sky warms toward the horizon and a soft glow sits behind the sun, both growing with
-    // progress. Drawn under the characters, so the picture stays ASCII; it rises once when the sun moves.
+    // progress; the halo is a ring, nearly clear at the centre, so the sun's core glyphs stay sharp at 4/4 (review
+    // F9-02). Drawn under the characters, so the picture stays ASCII; it rises once when the sun moves.
     `<defs><linearGradient id="nbs-sky" x1="0" y1="0" x2="0" y2="1">` +
     `<stop offset="0" stop-color="#0f0d0b" stop-opacity="0"/>` +
     `<stop offset="${HZ.toFixed(2)}" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.05 + 0.13 * prog).toFixed(3)}"/>` +
     `<stop offset="1" stop-color="#0f0d0b" stop-opacity="0"/></linearGradient>` +
-    `<radialGradient id="nbs-sun"><stop offset="0" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.1 + 0.22 * prog).toFixed(3)}"/>` +
-    `<stop offset=".55" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.03 + 0.07 * prog).toFixed(3)}"/>` +
+    `<radialGradient id="nbs-sun"><stop offset="0" stop-color="rgb(${m.sun.join(',')})" stop-opacity="0.04"/>` +
+    `<stop offset=".45" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.06 + 0.08 * prog).toFixed(3)}"/>` +
     `<stop offset="1" stop-color="rgb(${m.sun.join(',')})" stop-opacity="0"/></radialGradient></defs>` +
     `<g class="lit"><rect width="${W}" height="${H}" fill="url(#nbs-sky)"/>` +
     `<ellipse cx="${(SX * W).toFixed(1)}" cy="${((HZ - (m.sunUp ?? 0.19)) * H).toFixed(1)}" rx="${(W * (0.16 + 0.1 * prog)).toFixed(1)}" ry="${(H * (0.2 + 0.12 * prog)).toFixed(1)}" fill="url(#nbs-sun)"/></g>` +

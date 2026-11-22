@@ -142,6 +142,22 @@ const SOUND: ThemeSetArgs['sound'] = {
   },
 }
 
+/** STYLE without the parts a host may not take yet: offset shadows and the accent marks added with them. */
+const ADDED_MARKS = new Set(['M25.5 31.5H31.5V25.5', 'M0 0H2V6H0Z'])
+
+export function plainStyle(style: ThemeSetArgs['style']): ThemeSetArgs['style'] {
+  const out: Record<string, unknown> = {}
+
+  for (const [name, el] of Object.entries(style ?? {})) {
+    const { shadow: _shadow, ...rest } = el as Record<string, unknown> & { fill?: { vector?: { paths?: { d: string }[] } } }
+    const vector = rest.fill?.vector
+
+    out[name] = vector?.paths === undefined ? rest : { ...rest, fill: { ...rest.fill, vector: { ...vector, paths: vector.paths.filter(p => !ADDED_MARKS.has(p.d)) } } }
+  }
+
+  return out as ThemeSetArgs['style']
+}
+
 const GLASS = { blur: 0, tint: '#14120f', opacity: 0.18 } as const
 
 function look(withScene: boolean): ThemeSetArgs {
@@ -170,9 +186,14 @@ async function applyLook($: Dollar): Promise<void> {
     try {
       await $.theme.set(noSound as ThemeSetArgs)
     } catch {
-      const { style: _style, ...rest } = noSound
+      // Then the frames without shadows and accent marks, before giving up the whole style (review O9-02).
+      try {
+        await $.theme.set({ ...noSound, style: plainStyle(STYLE) } as ThemeSetArgs)
+      } catch {
+        const { style: _style, ...rest } = noSound
 
-      await $.theme.set(rest as ThemeSetArgs).catch(() => undefined)
+        await $.theme.set(rest as ThemeSetArgs).catch(() => undefined)
+      }
     }
   }
 }

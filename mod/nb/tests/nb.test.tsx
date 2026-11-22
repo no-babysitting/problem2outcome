@@ -6,6 +6,7 @@ import { bandSVG, wrap } from '../hooks/band-svg.js'
 import { ME_MISSING, presetLine, strip, WELCOME_BOTH } from '../hooks/colleague.js'
 import { languageOf, languageOfText, parseDecisions, progressOf, shellWriteTarget, supportLevels } from '../hooks/decisions.js'
 import { asciiSceneSVG } from '../hooks/scene.js'
+import { statusText } from '../hooks/status.js'
 
 // ---------- fixtures ----------
 
@@ -74,14 +75,14 @@ const workspace = (on: On, files: Files): void => {
 }
 
 /** Stands for the engine around the mod: store, theme, clock, usage, commands. */
-const engine = (on: On, store: Map<string, unknown> = new Map()): Map<string, unknown> => {
+const engine = (on: On, store: Map<string, unknown> = new Map(), themeSet?: (e: unknown) => unknown): Map<string, unknown> => {
   on('store.get', (_, e) => ({ value: store.get(e.key) }))
   on('store.set', (_, e) => {
     store.set(e.key, e.value)
 
     return { value: undefined }
   })
-  on('theme.set', () => ({ value: { isDrawn: true } as never }))
+  on('theme.set', (_, e) => ({ value: (themeSet?.(e) ?? { isDrawn: true }) as never }))
   on('session.usage', () => ({ value: { context: { percent: 42 }, rateLimits: [{ kind: 'five_hour', percentUsed: 37 }] } as never }))
   on('command.register', (_, e) => ({ value: { command: e.name } as never }))
   on('clock.after', () => ({ value: undefined }))
@@ -223,6 +224,59 @@ test('band: every state draws, under the Svg limit, with the face in it', () => 
     // DS motion rule: nothing loops forever.
     expect(svg.includes('infinite')).toBe(false)
   }
+})
+
+test('band: a two-line sentence ends above the rule, so descenders clear it (review F9-01)', () => {
+  const svg = bandSVG({
+    state: 'working',
+    line: 'Your call: what counts as done? A few checkable lines, please, so I know when to stop and you can judge it.',
+    isStale: false,
+    decisions: parseDecisions(LARGER_TWO_MADE),
+    contextPercent: 42,
+    limit: null,
+    lang: 'en',
+  })
+  const ys = [...svg.matchAll(/class="say"[^>]*>|<text x="\d+" y="(\d+)" class="say"/g)].map(m => Number(m[1])).filter(n => n > 0)
+  const rule = Number(/<rect x="\d+" y="(\d+)" width="\d+" height="1"/.exec(svg)?.[1])
+
+  expect(ys.length).toBe(2)
+  // A descender reaches about 4 px below the baseline at this size.
+  expect(Math.max(...ys) + 4 < rule).toBe(true)
+})
+
+test('/nb counts decisions as the band does: a skipped one is not made (review F9-03)', () => {
+  const skipped = LARGER_TWO_MADE.replace('Confirmed: yes\nReaders churn because issues are irregular.\n', 'Confirmed: skipped\n')
+  const d = parseDecisions(skipped)
+  const made = d.applies.filter((a, i) => a && d.made[i]).length
+
+  expect(d.skipped[0]).toBe(true)
+  expect(made).toBe(1)
+  expect(statusText({ lang: 'en', task: d, levels: null, level: 'normal', scene: true })).toMatch(new RegExp(`· ${made}/4\n`))
+  expect(bandSVG({ state: 'idle', line: '', isStale: false, decisions: d, contextPercent: null, limit: null, lang: 'en' })).toMatch(new RegExp(`>${made}/4<`))
+})
+
+test('a host that refuses shadows still gets the framed bubbles, not the bare default (review O9-02)', async ($, on) => {
+  const styles: string[] = []
+
+  engine(on, new Map(), e => {
+    const style = JSON.stringify((e as { style?: unknown }).style ?? null)
+
+    styles.push(style)
+    if (style.includes('shadow')) {
+      throw new Error('style.UserMessage.shadow: unknown key')
+    }
+
+    return undefined
+  })
+  workspace(on, {})
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true } as never)
+
+  const last = styles[styles.length - 1] ?? ''
+
+  expect(styles.length >= 2).toBe(true)
+  expect(last.includes('shadow')).toBe(false)
+  expect(last.includes('UserMessage')).toBe(true)
+  expect(last.includes('M25.5 31.5H31.5V25.5')).toBe(false)
 })
 
 test('scene: each sun height is a valid, small enough SVG', () => {
