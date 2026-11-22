@@ -418,6 +418,7 @@ export function asciiSceneSVG(
     stars.push(`<text class="st s${i % 3}" x="${(x * 7.8).toFixed(1)}" y="${(y + 1) * LH}">+</text>`)
   }
 
+  const prog = Math.max(0, Math.min(1, o.progress ?? 0.5))
   const css = [...palette].map(([rgb, name]) => `.${name}{fill:rgb(${rgb})}`).join('')
   const W = Math.round(cols * 7.8)
   const H = rows * LH + 4
@@ -443,12 +444,24 @@ export function asciiSceneSVG(
     '.bf{opacity:0;animation:bf .5s ease-out 1 backwards}@keyframes bf{0%{opacity:0}1%{opacity:1}100%{opacity:0}}' +
     '.bi{animation:bi .3s ease-out 1 backwards}@keyframes bi{from{opacity:0}to{opacity:1}}' +
     '.st{fill:#f4ecff;opacity:.25;animation:t 5s ease-in-out 2 alternate}.s1{animation-delay:-1.7s}.s2{animation-delay:-3.3s}@keyframes t{to{opacity:.8}}' +
-    '@media (prefers-reduced-motion:reduce){.w,.st,.bo,.bf,.bi{animation:none!important}.w1,.w2,.bo,.bf{opacity:0}}'
+    '.lit{animation:lit 2.4s ease-out 1 backwards}@keyframes lit{from{opacity:0}}' +
+    '@media (prefers-reduced-motion:reduce){.w,.st,.bo,.bf,.bi,.lit{animation:none!important}.w1,.w2,.bo,.bf{opacity:0}}'
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" class="nbs" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">` +
     `<style>${scopeCSS(`text{font:13px "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre}${css}${motion}`, 'nbs')}</style>` +
     `<rect width="${W}" height="${H}" fill="#0f0d0b"/>` +
+    // Light, not glyphs: the sky warms toward the horizon and a soft glow sits behind the sun, both growing with
+    // progress. Drawn under the characters, so the picture stays ASCII; it rises once when the sun moves.
+    `<defs><linearGradient id="nbs-sky" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="#0f0d0b" stop-opacity="0"/>` +
+    `<stop offset="${HZ.toFixed(2)}" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.05 + 0.13 * prog).toFixed(3)}"/>` +
+    `<stop offset="1" stop-color="#0f0d0b" stop-opacity="0"/></linearGradient>` +
+    `<radialGradient id="nbs-sun"><stop offset="0" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.1 + 0.22 * prog).toFixed(3)}"/>` +
+    `<stop offset=".55" stop-color="rgb(${m.sun.join(',')})" stop-opacity="${(0.03 + 0.07 * prog).toFixed(3)}"/>` +
+    `<stop offset="1" stop-color="rgb(${m.sun.join(',')})" stop-opacity="0"/></radialGradient></defs>` +
+    `<g class="lit"><rect width="${W}" height="${H}" fill="url(#nbs-sky)"/>` +
+    `<ellipse cx="${(SX * W).toFixed(1)}" cy="${((HZ - (m.sunUp ?? 0.19)) * H).toFixed(1)}" rx="${(W * (0.16 + 0.1 * prog)).toFixed(1)}" ry="${(H * (0.2 + 0.12 * prog)).toFixed(1)}" fill="url(#nbs-sun)"/></g>` +
     `<g>${stars.join('')}</g>` +
     `<g class="nz">${noise.join('')}</g>` +
     `<g class="fr" fill-opacity=".6">${front.join('')}</g>` +

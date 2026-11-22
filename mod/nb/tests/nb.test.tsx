@@ -253,7 +253,7 @@ test('band on desktop draws an Svg; on the terminal, the face as text', async ($
   const drawn = (await desk.drawn()) as { type: string; props: { source: string } }
 
   expect(drawn.type).toBe('Svg')
-  expect(drawn.props.source.includes('giao việc') || drawn.props.source.includes('delegate')).toBe(true)
+  expect(/giao việc|delegate/i.test(drawn.props.source)).toBe(true)
   await desk.unmount()
 
   const term = await $.ui.mount({ ...BAND, surface: 'terminal' } as never)

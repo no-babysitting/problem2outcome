@@ -23,7 +23,7 @@ export type BandModel = {
 }
 
 export const BAND_W = 720
-export const BAND_H = 76
+export const BAND_H = 88
 
 const MONO = `'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace`
 const SANS = `'Be Vietnam Pro',system-ui,'Segoe UI',Roboto,sans-serif`
@@ -135,6 +135,9 @@ const meter = (percent: number): string => {
   return '█'.repeat(full) + '░'.repeat(cells - full)
 }
 
+/** Calm until it matters: muted, then warn from 70%, danger from 90%. */
+const levelColor = (percent: number): string => (percent >= 90 ? NB.danger : percent >= 70 ? NB.warn : NB.fgMuted)
+
 /** The usage limit, short: "5h limit" / "hạn 5h". */
 const limitWords = (lang: Lang, kind: string): string => {
   const k = kind === 'five_hour' ? '5h' : kind === 'seven_day' ? '7d' : kind
@@ -142,110 +145,197 @@ const limitWords = (lang: Lang, kind: string): string => {
   return lang === 'vi' ? `${UI.vi.limit} ${k}` : `${k} ${UI.en.limit}`
 }
 
+/** The state in one or two words, for the filled tag. */
+const STATE_TAG: Record<Lang, Record<ColleagueState, string>> = {
+  en: { idle: 'Waiting', thinking: 'Reading', working: 'Working', asking: 'Asking', overloaded: 'Busy', verified: 'Accepted' },
+  vi: { idle: 'Chờ bạn', thinking: 'Đang đọc', working: 'Đang làm', asking: 'Đang hỏi', overloaded: 'Nhiều việc', verified: 'Đã nhận' },
+}
+
+// Labels are monospace capitals with a little tracking; one advance is about 0.6 em plus the tracking.
+const LABEL_PX = 10.5
+const TRACK_PX = 0.9
+const labelWidth = (s: string): number => [...s].length * (LABEL_PX * 0.6 + TRACK_PX)
+const upper = (s: string): string => s.toLocaleUpperCase('vi')
+
+/** A tag: filled (the state) or outlined (the progress), joined edge to edge as a pair. */
+const tag = (x: number, y: number, text: string, filled: boolean, fill: string): { svg: string; w: number } => {
+  const w = Math.ceil(labelWidth(text)) + 14
+
+  return {
+    w,
+    svg:
+      (filled
+        ? `<rect x="${x}" y="${y}" width="${w}" height="17" fill="${fill}"/>`
+        : `<rect x="${x + 0.5}" y="${y + 0.5}" width="${w - 1}" height="16" fill="none" stroke="${NB.line}"/>`) +
+      `<text x="${x + 7}" y="${y + 12.2}" class="lab" fill="${filled ? NB.bgSunken : NB.fgMuted}">${xml(text)}</text>`,
+  }
+}
+
+/** The Colleague's tile: a solid square in the state's colour, the face cut out of it in the page's dark. */
+const tileSVG = (state: ColleagueState, x: number, y: number, w: number, h: number): string => {
+  const f = FACES[state]
+  const inner = portrait(state, x, y, w, h)
+  // Reuse the aura's glyph placement, drawn dark on the colour instead of coloured on the dark.
+  const aura = /<g class="aura"[^>]*>([\s\S]*)<\/g>$/.exec(inner)?.[1] ?? ''
+
+  // Waiting is quiet: an outlined tile and a muted face. Every other state fills the tile with its colour.
+  if (state === 'idle') {
+    return (
+      `<rect x="${x + 0.5}" y="${y + 0.5}" width="${w - 1}" height="${h - 1}" fill="${NB.bgSunken}" stroke="${NB.line}"/>` +
+      `<g class="aura" fill="${f.color}" fill-opacity=".5">${aura}</g>`
+    )
+  }
+
+  return (
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f.color}" class="tile"/>` +
+    `<g class="aura" fill="${NB.bgSunken}" fill-opacity=".38">${aura}</g>`
+  )
+}
+
+/** Eight small + leave the face once when the user accepts (verified): order, not confetti. */
+const burst = (cx: number, cy: number): string =>
+  [0, 1, 2, 3, 4, 5, 6, 7]
+    .map(k => {
+      const a = (k / 8) * Math.PI * 2 + 0.3
+      const dx = (Math.cos(a) * 34).toFixed(1)
+      const dy = (Math.sin(a) * 22).toFixed(1)
+
+      return `<text x="${cx}" y="${cy}" class="spark" style="--dx:${dx}px;--dy:${dy}px">+</text>`
+    })
+    .join('')
+
+/**
+ * The decisions as a row of tabs, like a site's section nav: "[1] VẤN ĐỀ". The key shows the state: a number while
+ * open, ✓ made (signal), ↺ redo (warn), – skipped. Your turn is the bright tab, underlined in accent, with the cursor
+ * blinking three times (DS M7).
+ */
+const tabs = (m: BandModel, left: number, y: number): string => {
+  const d = m.decisions
+  const words = DECISION_WORDS[m.lang]
+
+  if (d === null) {
+    return `<text x="${left}" y="${y}" class="lab" fill="${NB.fgSubtle}">${xml(upper(UI[m.lang].noTask))}</text>`
+  }
+  const out: string[] = []
+  let x = left
+
+  for (let i = 0; i < 4; i++) {
+    if (!d.applies[i]) {
+      continue
+    }
+    const made = d.made[i]
+    const redo = i === 3 && d.redo
+    const isNext = d.next === i + 1
+    const key = made ? (redo ? '↺' : '✓') : d.skipped[i] ? '–' : String(i + 1)
+    const keyColor = made ? (redo ? NB.warn : NB.signal) : isNext ? NB.accent : NB.control
+    const label = upper(words[i] ?? '')
+    const labelColor = isNext ? NB.fg : made ? NB.fgMuted : NB.fgSubtle
+    const keyW = labelWidth(`[${key}] `)
+    const flash = i === 3 && d.accepted && m.state === 'verified' ? ' flash' : ''
+
+    out.push(
+      `<text x="${x.toFixed(1)}" y="${y}" class="lab"><tspan fill="${NB.control}">[</tspan><tspan fill="${keyColor}" class="key${flash}">${key}</tspan><tspan fill="${NB.control}">]</tspan></text>`,
+    )
+    out.push(`<text x="${(x + keyW).toFixed(1)}" y="${y}" class="lab${isNext ? ' on' : ''}" fill="${labelColor}">${xml(label)}</text>`)
+    if (isNext) {
+      const lw = labelWidth(label)
+
+      out.push(`<rect x="${(x + keyW).toFixed(1)}" y="${y + 5}" width="${lw.toFixed(1)}" height="2" fill="${NB.accent}" class="uline"/>`)
+      out.push(`<rect x="${(x + keyW + lw + 3).toFixed(1)}" y="${y - 8}" width="5" height="10" fill="${NB.accent}" class="cur"/>`)
+    }
+    x += keyW + labelWidth(label) + 26
+  }
+
+  return out.join('')
+}
+
 export function bandSVG(m: BandModel): string {
   const f = FACES[m.state]
-  const words = DECISION_WORDS[m.lang]
   const ui = UI[m.lang]
   const [s1, s2] = scrambles(m.state)
-
-  // ---- row 1: face and bubble ----
-  // The portrait takes the band's full height on the left; the bubble and meter share row 1, the decisions row 2.
-  const tile = { x: 8, y: 4, w: 104, h: BAND_H - 8 }
-  const left = tile.x + tile.w + 14
+  const H = BAND_H
+  const tile = { x: 8, y: 6, w: 96, h: H - 12 }
+  const left = tile.x + tile.w + 18
+  const right = BAND_W - 12
   const faceX = tile.x + tile.w / 2
   const faceY = tile.y + tile.h / 2 + 7
-  const bubbleX = left + 8
-  const lines = m.line === '' ? [] : wrap(m.line, 380)
-  const bw = lines.length === 0 ? 0 : Math.ceil(Math.max(...lines.map(sansWidth))) + 28
-  const bh = lines.length === 2 ? 44 : 30
-  const by = lines.length === 2 ? 2 : 9
-  const bubble =
+
+  // ---- row 1: the tag pair, then The Colleague's sentence; the meta on the right ----
+  const d = m.decisions
+  const t1 = tag(left, 6, upper(STATE_TAG[m.lang][m.state]), true, f.color)
+  const applies = d === null ? 0 : d.applies.filter(Boolean).length
+  const made = d === null ? 0 : d.applies.filter((a, i) => a && d.made[i]).length
+  const t2 = d === null ? { svg: '', w: 0 } : tag(left + t1.w, 6, `${made}/${applies}`, false, '')
+  const lines = m.line === '' ? [] : wrap(m.line, 440)
+  const say =
     lines.length === 0
       ? ''
       : `<g class="bub${m.isStale ? ' stale' : ''}">` +
-        `<path d="M${bubbleX} ${by}h${bw}v${bh}h-${bw}v${bh / 2 - 6}l-9 6 9 6z" fill="${NB.bgRaised}" fill-opacity=".94" stroke="${NB.line}"/>` +
         lines
-          .map((l, i) => `<text x="${bubbleX + 14}" y="${by + (lines.length === 2 ? 18 + i * 17 : 20)}" class="say">${xml(l)}</text>`)
+          .map(
+            (l, i) =>
+              `<clipPath id="nbb-ty${i}"><rect x="${left}" y="${24 + i * 17}" width="470" height="20" class="ty ty${i}"/></clipPath>` +
+              `<text x="${left}" y="${39 + i * 17}" class="say" clip-path="url(#nbb-ty${i})">${xml(l)}</text>`,
+          )
           .join('') +
         `</g>`
 
-  // ---- row 2: the four decisions, then the context meter ----
-  // One <text> with tspans: the browser lays the labels out, so wide glyphs (①, Vietnamese marks) never collide.
-  const d = m.decisions
-  let strip = ''
-
-  if (d === null) {
-    strip = `<text x="${left}" y="66" class="mono quiet">${xml(ui.noTask)}</text>`
-  } else {
-    const spans: string[] = []
-
-    for (let i = 0; i < 4; i++) {
-      if (!d.applies[i]) {
-        continue
-      }
-      const isNext = d.next === i + 1
-      const made = d.made[i]
-      const cls = made ? 'done' : isNext ? 'next' : 'later'
-      const skipped = d.skipped[i]
-      const gap = spans.length === 0 ? '' : ' dx="16"'
-
-      spans.push(`<tspan${gap} class="${cls}">${xml(`${CIRCLED[i]} ${words[i]}`)}</tspan>`)
-      if (made) {
-        // M9: the moment the user accepts, the last ✓ flashes signal once.
-        const flash = i === 3 && d.accepted && m.state === 'verified' ? ' flash' : ''
-
-        spans.push(`<tspan dx="5" class="ok${flash}">${i === 3 && d.redo ? '↺' : '✓'}</tspan>`)
-      } else if (skipped) {
-        // A pause the user chose to skip: not made, not waiting either.
-        spans.push(`<tspan dx="5" class="quiet">–</tspan>`)
-      } else if (isNext) {
-        spans.push(`<tspan dx="3" class="cur">▍</tspan>`)
-      }
-    }
-    strip = `<text x="${left}" y="66" class="mono">${spans.join('')}</text>`
-  }
-
   const ctx = m.contextPercent
   const lim = m.limit
-  // The meter sits top right in two quiet lines, so the decisions keep row 2 to themselves.
-  const meterSvg =
-    ctx === null
-      ? ''
-      : `<text x="${BAND_W - 12}" y="20" text-anchor="end" class="mono quiet">${xml(`${ui.context} ${meter(ctx)} ${Math.round(ctx)}%`)}</text>` +
-        (lim === null
-          ? ''
-          : `<text x="${BAND_W - 12}" y="36" text-anchor="end" class="mono quiet">${xml(`${limitWords(m.lang, lim.kind)} ${Math.round(lim.percentUsed)}%`)}</text>`)
+  const meta = (label: string, pct: number, y: number): string =>
+    `<text x="${right}" y="${y}" text-anchor="end" class="lab"><tspan fill="${NB.fgSubtle}">${xml(upper(label))}</tspan>` +
+    `<tspan dx="8" fill="${levelColor(pct)}" class="num">${Math.round(pct)}%</tspan></text>`
+  const metas = (ctx === null ? '' : meta(ui.context, ctx, 18)) + (lim === null ? '' : meta(limitWords(m.lang, lim.kind), lim.percentUsed, 36))
 
+  const blinks = m.state === 'idle' || m.state === 'asking'
   const css =
-    `.mono{font:600 11.5px ${MONO}}.say{font:400 13px ${SANS};fill:${NB.fg}}` +
-    `.face{font:600 23px ${MONO};text-anchor:middle}.tail{font:600 18px ${MONO}}.aura text{font:400 8px ${MONO}}.aura{animation:aura .6s ease-out 1 both}@keyframes aura{from{opacity:0}to{opacity:1}}` +
-    `.done{fill:${NB.fgMuted}}.ok{fill:${NB.signal};font-weight:700}.next{fill:${NB.fg}}.cur{fill:${NB.accent};animation:blink 1.1s steps(1,end) 3}` +
-    `.later,.quiet{fill:${NB.fgSubtle}}.stale{opacity:.62}` +
-    `.flash{animation:flash .9s ease-out 1 both}@keyframes flash{0%{fill:${NB.fg}}20%{fill:${NB.signal};font-size:15px}100%{fill:${NB.signal}}}` +
+    `.lab{font:500 ${LABEL_PX}px ${MONO};letter-spacing:${TRACK_PX}px}.num{font-weight:600}.on{font-weight:700}` +
+    `.say{font:400 13.5px ${SANS};fill:${NB.fg}}.stale{opacity:.62}` +
+    `.face{font:600 21px ${MONO};text-anchor:middle}.tail{font:600 16px ${MONO}}.aura text{font:400 8px ${MONO}}.aura{animation:aura .6s ease-out 1 both}@keyframes aura{from{opacity:0}to{opacity:1}}` +
+    `.cur{animation:blink 1.1s steps(1,end) 3}@keyframes blink{50%{opacity:0}}` +
+    `.uline{transform-box:fill-box;transform-origin:left;animation:uline .45s cubic-bezier(.2,.7,.2,1) 1 both}@keyframes uline{from{transform:scaleX(0)}}` +
+    `.tile{animation:tile .35s steps(1,end) 1 both}@keyframes tile{from{fill:${NB.bgSunken}}}` +
+    `.flash{animation:flash .9s ease-out 1 both}@keyframes flash{0%{fill:${NB.fg}}25%{fill:${NB.signal};font-size:14px}100%{fill:${NB.signal}}}` +
+    `.bub{animation:bin .28s ease-out 1 both}@keyframes bin{from{opacity:0;transform:translateY(3px)}}` +
+    `.ty{animation:ty .55s steps(28,end) .1s 1 both}.ty1{animation:ty .55s steps(28,end) .6s 1 both}@keyframes ty{from{width:0}}` +
     `.sc{opacity:0}.sc0{animation:sc0 .35s steps(1,end) 1 both}.sc1{animation:sc1 .35s steps(1,end) 1 both}` +
     `.real{animation:real .35s steps(1,end) 1 both}` +
     `.pulse{animation:pulse 1.4s ease-in-out 3 alternate both}` +
+    `.lid{opacity:0;animation:lid 5.2s linear .8s 1}@keyframes lid{0%,45%,48.5%,86%,89.5%,100%{opacity:0}45.1%,48.4%,86.1%,89.4%{opacity:1}}` +
+    `.spark{font:700 10px ${MONO};fill:${NB.bgSunken};text-anchor:middle;opacity:0;animation:spark 1s cubic-bezier(.2,.7,.2,1) .2s 1}` +
+    `@keyframes spark{from{opacity:1;transform:translate(0,0)}to{opacity:0;transform:translate(var(--dx),var(--dy))}}` +
     `@keyframes sc0{0%{opacity:1}33%{opacity:0}}@keyframes sc1{0%{opacity:0}33%{opacity:1}66%{opacity:0}}` +
-    `@keyframes real{0%{opacity:0}66%{opacity:1}100%{opacity:1}}@keyframes blink{50%{opacity:0}}@keyframes pulse{from{fill-opacity:.45}to{fill-opacity:1}}` +
-    `@media (prefers-reduced-motion:reduce){.sc0,.sc1{animation:none;opacity:0}.real,.cur,.pulse,.flash,.aura{animation:none;opacity:1;fill-opacity:1}}`
+    `@keyframes real{0%{opacity:0}66%{opacity:1}100%{opacity:1}}@keyframes pulse{from{fill-opacity:.45}to{fill-opacity:1}}` +
+    `@media (prefers-reduced-motion:reduce){.sc0,.sc1,.spark,.lid{animation:none;opacity:0}` +
+    `.real,.cur,.pulse,.aura,.bub,.ty,.ty1,.uline,.tile,.flash{animation:none;opacity:1;fill-opacity:1;transform:none}}`
 
   const tailCls = m.state === 'working' || m.state === 'thinking' ? 'tail pulse' : 'tail'
   const alt = `${m.lang === 'vi' ? 'Đồng nghiệp' : 'Colleague'}: ${STATE_WORDS[m.lang][m.state]}`
+  const lidFace = f.face.replace(/^\[(.)(.)(.)\]$/, '[-$2-]')
+  const ink = m.state === 'idle' ? f.color : NB.bgSunken
 
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${BAND_W}" height="${BAND_H}" viewBox="0 0 ${BAND_W} ${BAND_H}" role="img" class="nbb" aria-label="${xml(alt)}">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${BAND_W}" height="${H}" viewBox="0 0 ${BAND_W} ${H}" role="img" class="nbb" aria-label="${xml(alt)}">` +
     `<style>${scopeCSS(css, 'nbb')}</style>` +
-    `<rect width="${BAND_W}" height="${BAND_H}" fill="${NB.bg}" fill-opacity=".86"/>` +
-    portrait(m.state, tile.x, tile.y, tile.w, tile.h) +
-    `<text x="${faceX}" y="${faceY}" class="face sc sc0" fill="${f.color}">${xml(s1)}</text>` +
-    `<text x="${faceX}" y="${faceY}" class="face sc sc1" fill="${f.color}">${xml(s2)}</text>` +
-    `<g class="real"><text x="${faceX}" y="${faceY}" class="face" fill="${f.color}">${xml(f.face)}` +
-    (f.tail === '' ? '' : `<tspan dx="2" class="${tailCls}">${xml(f.tail)}</tspan>`) +
+    `<rect width="${BAND_W}" height="${H}" fill="${NB.bg}" fill-opacity=".94"/>` +
+    `<rect width="${BAND_W}" height="1" fill="${NB.line}"/>` +
+    tileSVG(m.state, tile.x, tile.y, tile.w, tile.h) +
+    `<text x="${faceX}" y="${faceY}" class="face sc sc0" fill="${ink}">${xml(s1)}</text>` +
+    `<text x="${faceX}" y="${faceY}" class="face sc sc1" fill="${ink}">${xml(s2)}</text>` +
+    `<g class="real"><text x="${faceX}" y="${faceY}" class="face" fill="${ink}">${xml(f.face)}` +
+    (f.tail === '' ? '' : `<tspan dx="1" class="${tailCls}">${xml(f.tail)}</tspan>`) +
     `</text></g>` +
-    bubble +
-    `<line x1="${left}" x2="${BAND_W - 12}" y1="47.5" y2="47.5" stroke="${NB.line}" stroke-dasharray="2 4"/>` +
-    strip +
-    meterSvg +
+    (blinks
+      ? `<g class="lid"><rect x="${faceX - 36}" y="${faceY - 18}" width="72" height="24" fill="${m.state === 'idle' ? NB.bgSunken : f.color}"/>` +
+        `<text x="${faceX}" y="${faceY}" class="face" fill="${ink}">${xml(lidFace)}</text></g>`
+      : '') +
+    (m.state === 'verified' ? burst(faceX, faceY - 8) : '') +
+    t1.svg +
+    t2.svg +
+    say +
+    metas +
+    `<rect x="${left}" y="${H - 29}" width="${right - left}" height="1" fill="${NB.line}"/>` +
+    tabs(m, left, H - 11) +
     `</svg>`
   )
 }

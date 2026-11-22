@@ -36,8 +36,11 @@ header p { margin: 0; color: var(--muted); max-width: 70ch; }
 .col { width: min(680px, 100%); display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
 .msg { padding: 10px 14px; font-size: 14.5px; max-width: 100%; }
 .user { align-self: flex-end; background: #1c1916; border: 1px solid #3a332c; max-width: 80%; position: relative; padding: 12px 16px; }
+.user { box-shadow: 3px 3px 0 #0b0a08; }
 .user::before { content: ''; position: absolute; left: -1px; top: -1px; width: 5px; height: 5px; background: #d97a4a; }
-.assistant { background: #14120ff2; border-left: 1px solid #3a332c; padding-left: 18px; }
+.user::after { content: ''; position: absolute; right: -1px; bottom: -1px; width: 6px; height: 6px; border-right: 1px solid #d97a4a; border-bottom: 1px solid #d97a4a; }
+.assistant { background: #14120ff2; border-left: 1px solid #3a332c; padding-left: 18px; position: relative; }
+.assistant::before { content: ''; position: absolute; left: -1px; top: 0; width: 2px; height: 6px; background: #d97a4a; }
 .assistant code { font: 12.5px var(--mono); color: var(--muted); }
 .tool { font: 12px var(--mono); color: var(--muted); background: #0f0d0b; border: 1px solid var(--line); padding: 5px 10px; align-self: flex-start; }
 .spacer { flex: 1; }

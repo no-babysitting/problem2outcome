@@ -89,9 +89,13 @@ const STYLE: ThemeSetArgs['style'] = {
           { d: 'M0 0H32V32H0Z', color: '#1c1916' },
           { d: FRAME, strokeWidth: 1, color: '#3a332c' },
           { d: 'M0 0H5V5H0Z', color: '#d97a4a' },
+          // A crop mark in the opposite corner: the card reads as a selection the person made.
+          { d: 'M25.5 31.5H31.5V25.5', strokeWidth: 1, color: '#d97a4a' },
         ],
       },
     },
+    // A hard offset shadow, no blur: paper on paper, the DS brutalist card.
+    shadow: { x: 3, y: 3, blur: 0, color: '#0b0a08' },
   },
   // Claude's words: the page itself, with a quiet rule down the left, like a log in a terminal.
   AssistantMessage: {
@@ -107,6 +111,8 @@ const STYLE: ThemeSetArgs['style'] = {
         paths: [
           { d: 'M0 0H32V32H0Z', color: '#14120ff2' },
           { d: 'M0 0H1V32H0Z', color: '#3a332c' },
+          // The log's cursor: the rule starts with a short accent tick at the top of each run of words.
+          { d: 'M0 0H2V6H0Z', color: '#d97a4a' },
         ],
       },
     },
