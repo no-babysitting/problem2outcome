@@ -1,0 +1,141 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>NB Mod Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a mock Claude Desktop window (scene behind, chat column, band above the prompt) under a strip of controls. Single dark look, the NB website tokens. */
+:root {
+  --bg: #14120f; --raised: #1c1916; --sunken: #0f0d0b; --line: #2e2924;
+  --fg: #ede6da; --muted: #ada395; --subtle: #8d8376; --accent: #d97a4a;
+  --text: "Be Vietnam Pro", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--text); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+h1 { font: 600 22px/1.2 var(--mono); margin: 0; letter-spacing: -0.01em; }
+h1 span { color: var(--accent); }
+header p { margin: 0; color: var(--muted); max-width: 70ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; padding: 14px 16px; background: var(--raised); border: 1px solid var(--line); }
+.controls label { display: grid; gap: 4px; font: 500 11.5px var(--mono); color: var(--subtle); text-transform: uppercase; letter-spacing: .06em; }
+.controls select, .controls input[type=text] { font: 14px var(--text); color: var(--fg); background: var(--sunken); border: 1px solid var(--line); padding: 6px 8px; border-radius: 0; min-width: 0; }
+.controls input[type=text] { width: min(340px, 80vw); }
+.controls input[type=range] { accent-color: var(--accent); width: 140px; }
+.controls output { font: 12px var(--mono); color: var(--fg); text-transform: none; letter-spacing: 0; }
+.check { display: flex !important; grid-auto-flow: column; align-items: center; gap: 6px !important; }
+.check input { accent-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.window { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border: 1px solid var(--line); overflow: hidden; background: var(--sunken); min-height: 520px; }
+.titlebar { position: absolute; inset: 0 0 auto; height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; font: 12px var(--mono); color: var(--subtle); background: #0f0d0bcc; border-bottom: 1px solid var(--line); z-index: 2; }
+.titlebar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: inline-block; }
+#backdrop, #backdrop svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.veil { position: absolute; inset: 0; background: #14120f2e; }
+.chat { position: absolute; inset: 34px 0 0; display: flex; flex-direction: column; align-items: center; padding: 22px 16px 0; }
+.col { width: min(680px, 100%); display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
+.msg { padding: 10px 14px; font-size: 14.5px; max-width: 100%; }
+.user { align-self: flex-end; background: #1c1916; border: 1px solid #3a332c; max-width: 80%; position: relative; padding: 12px 16px; }
+.user { box-shadow: 3px 3px 0 #0b0a08; }
+.user::before { content: ''; position: absolute; left: -1px; top: -1px; width: 5px; height: 5px; background: #d97a4a; }
+.user::after { content: ''; position: absolute; right: -1px; bottom: -1px; width: 6px; height: 6px; border-right: 1px solid #d97a4a; border-bottom: 1px solid #d97a4a; }
+.assistant { background: #14120ff2; border-left: 1px solid #3a332c; padding-left: 18px; position: relative; }
+.assistant::before { content: ''; position: absolute; left: -1px; top: 0; width: 2px; height: 6px; background: #d97a4a; }
+.assistant code { font: 12.5px var(--mono); color: var(--muted); }
+.tool { font: 12px var(--mono); color: var(--muted); background: #0f0d0b; border: 1px solid var(--line); padding: 5px 10px; align-self: flex-start; }
+.spacer { flex: 1; }
+.band { overflow-x: auto; }
+.band svg { display: block; max-width: 100%; height: auto; }
+.prompt { margin: 6px 0 16px; border: 1px solid var(--line); background: var(--raised); padding: 12px 14px; color: var(--subtle); font-size: 14px; display: flex; justify-content: space-between; }
+.prompt kbd { font: 11px var(--mono); color: var(--subtle); }
+.note { font: 12px var(--mono); color: var(--subtle); margin: 0; }
+.faces { display: grid; }
+.faces div { display: grid; grid-template-columns: 7.5em 1fr; align-items: baseline; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--line); }
+.faces div:first-child { border-top: 0; }
+.faces b { font: 600 15px var(--mono); white-space: nowrap; }
+.faces span { font: 500 10.5px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+/* claude.dev layout language (v3): mono uppercase labels with [k] keys, joined filled/outlined tags, hairlines, flat. */
+.eyebrow { display: flex; gap: 0; font: 600 10.5px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+.eyebrow b, .eyebrow i { font-style: normal; padding: 4px 7px; border: 1px solid var(--accent); }
+.eyebrow b { background: var(--accent); color: var(--sunken); }
+.eyebrow i { color: var(--accent); border-left: 0; }
+.controls label .k { color: var(--fg); }
+.below { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { border: 1px solid var(--line); background: var(--raised); min-width: 0; }
+.panel h2 { margin: 0; display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); font: 600 10.5px/1.3 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--subtle); }
+.panel h2 span { color: var(--fg); }
+.panel h2 em { font-style: normal; color: var(--accent); }
+.term { margin: 0; padding: 12px 14px 14px; font: 12.5px/1.7 var(--mono); color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.term .lab { color: var(--fg); letter-spacing: .04em; }
+.term .k-done { color: #8cc084; } .term .k-redo { color: #e2b04a; } .term .k-skip { color: var(--subtle); } .term .k-num { color: var(--subtle); }
+.term .next { color: var(--fg); font-weight: 600; box-shadow: inset 0 -1px 0 var(--accent); }
+.term .cmd { color: var(--accent); }
+@media (max-width: 860px) { .below { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .window { aspect-ratio: auto; min-height: 640px; } .user { max-width: 92%; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><b>NB mod</b><i>v0.1 · xem trước</i></div>
+    <h1>[•_•] <span>NB</span> cho Claude Desktop</h1>
+    <p>Bản xem trước dùng đúng mã vẽ của mod: The Colleague và câu nói của nó ngay trên ô nhập, bốn quyết định của việc đang làm, mức ngữ cảnh và hạn dùng, kết quả lệnh /nb, và cảnh ASCII màu phía sau với mặt trời lên theo số quyết định bạn đã chốt. Đổi các ô bên dưới để xem từng trạng thái.</p>
+  </header>
+  <div class="controls">
+    <label for="state"><span><span class="k">[1]</span> Colleague</span>
+      <select id="state">
+        <option value="idle">idle: chờ bạn</option>
+        <option value="thinking">thinking: đọc, lên kế hoạch</option>
+        <option value="working">working: đang làm</option>
+        <option value="asking">asking: hỏi bạn</option>
+        <option value="overloaded">overloaded: nhiều việc</option>
+        <option value="verified">verified: đạt tiêu chí</option>
+      </select></label>
+    <label for="size"><span><span class="k">[2]</span> Cỡ việc</span>
+      <select id="size"><option value="larger">lớn: 4 quyết định</option><option value="small">nhỏ: quyết định 2 và 4</option></select></label>
+    <label for="made"><span><span class="k">[3]</span> Đã chốt <output id="madeOut">1/4</output></span>
+      <input id="made" type="range" min="0" max="4" value="1"></label>
+    <label for="ctx"><span><span class="k">[4]</span> Ngữ cảnh <output id="ctxOut">42%</output></span>
+      <input id="ctx" type="range" min="0" max="100" value="42"></label>
+    <label for="lang"><span><span class="k">[5]</span> Ngôn ngữ</span>
+      <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+    <label for="line"><span><span class="k">[6]</span> Câu của Colleague (trống: câu viết sẵn)</span>
+      <input id="line" type="text" placeholder="Ví dụ: Tiêu chí 1 và 2 đạt, tiêu chí 3 chưa."></label>
+    <label class="check" for="notask"><input id="notask" type="checkbox"> chưa có việc</label>
+    <label class="check" for="scene"><input id="scene" type="checkbox" checked> cảnh nền</label>
+  </div>
+  <div class="window" aria-label="Cửa sổ Claude Desktop giả lập">
+    <div id="backdrop" aria-hidden="true"></div>
+    <div class="veil"></div>
+    <div class="titlebar"><i></i><i></i><i></i>&nbsp; tet-email · problem2outcome</div>
+    <div class="chat">
+      <div class="col">
+        <div class="msg user">Viết giúp mình email gửi khách cũ mời chụp ảnh Tết, giảm 15% nếu đặt trước 20/12.</div>
+        <div class="msg assistant">Mình hiểu việc là: nhắc khách cũ quay lại đặt lịch chụp Tết, với ưu đãi có hạn. Trước khi viết, phần quyết định là của bạn: <b>thế nào là xong?</b> Mình đề xuất ba tiêu chí, bạn sửa hoặc thêm:<br>1. Dưới 150 chữ &nbsp; 2. Hạn chót 20/12 rõ ràng &nbsp; 3. Một câu kêu gọi đặt lịch</div>
+        <div class="tool">Write tasks/2026-11-20-tet-email/decisions.md</div>
+        <div class="spacer"></div>
+        <div class="band" id="band"></div>
+        <div class="prompt">Trả lời Claude… <kbd>⏎</kbd></div>
+      </div>
+    </div>
+  </div>
+  <p class="note" id="sceneNote"></p>
+  <div class="below">
+    <section class="panel" aria-label="Kết quả lệnh /nb">
+      <h2><span><em>/nb</em> · việc đang làm</span><span>0 token</span></h2>
+      <pre class="term" id="status"></pre>
+    </section>
+    <section class="panel" aria-label="Bảy trạng thái của The Colleague">
+      <h2><span>The Colleague</span><span>7 trạng thái</span></h2>
+    <div class="faces">
+      <div><b style="color:#ada395">[•_•]</b><span>chờ bạn</span></div>
+      <div><b style="color:#ada395">[ •_•]</b><span>để ý bạn (bản sau)</span></div>
+      <div><b style="color:#8fb3d9">[°_°]…</b><span>đọc và lên kế hoạch</span></div>
+      <div><b style="color:#d97a4a">[&gt;_&lt;]≡</b><span>đang chạy công cụ</span></div>
+      <div><b style="color:#e2b04a">[•_•]?</b><span>hỏi bạn, không nói thêm</span></div>
+      <div><b style="color:#e2b04a">[@_@]</b><span>từ 3 việc song song</span></div>
+      <div><b style="color:#8cc084">[^_^]✓</b><span>bạn vừa nghiệm thu</span></div>
+    </div>
+    </section>
+  </div>
+</div>
+<script src="main.js"></script>

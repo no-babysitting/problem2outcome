@@ -1,0 +1,14 @@
+{
+  "name": "no-babysitting",
+  "description": "problem2outcome: do real work with an AI agent while you make the four decisions. Holds the optional NB mod for Claude Code.",
+  "owner": {
+    "name": "No Babysitting"
+  },
+  "plugins": [
+    {
+      "name": "nb",
+      "source": "./mod/nb",
+      "description": "The Colleague above the prompt, your task's four decisions, a calm context meter, a coloured ASCII scene, and the grill-me, challenge-me and teach-me skills."
+    }
+  ]
+}
